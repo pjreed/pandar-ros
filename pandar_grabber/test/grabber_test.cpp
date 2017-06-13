@@ -1,32 +1,3 @@
-/*
- *  Copyright (c) 2017, Hesai Photonics Technology Co., Ltd
- *  All rights reserved.
- *  
- *  Redistribution and use in source and binary forms, with or without
- *  modification, are permitted provided that the following conditions are met:
- *  
- *  1. Redistributions of source code must retain the above copyright notice, this
- *     list of conditions and the following disclaimer.
- *  2. Redistributions in binary form must reproduce the above copyright notice,
- *     this list of conditions and the following disclaimer in the documentation
- *     and/or other materials provided with the distribution.
- *  
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
- *  ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *  
- *  The views and conclusions contained in the software and documentation are those
- *  of the authors and should not be interpreted as representing official policies,
- *  either expressed or implied, of the FreeBSD Project.
- */
-
 #include "pandar_grabber/pandar_grabber.h"
 #include <unistd.h>
 #include <stdio.h>
@@ -46,14 +17,14 @@ class SimpleHDLGrabber
 {
   public:
     std::string calibrationFile, pcapFile;
-//    pcl::visualization::CloudViewer viewer;
+    pcl::visualization::CloudViewer viewer;
     pcl::PandarGrabber interface;
 
     SimpleHDLGrabber (std::string& calibFile, std::string& pcapFile) 
       : calibrationFile (calibFile)
       , pcapFile (pcapFile) 
       , interface (calibrationFile, pcapFile)
-//      ,viewer("Simple Cloud Viewer")
+      ,viewer("Simple Cloud Viewer")
     {
        
     }
@@ -84,7 +55,7 @@ class SimpleHDLGrabber
     	// sleep(10);
       static unsigned count = 0;
       static double last = pcl::getTime();
-
+#if 0
       if (sweep->header.seq == 0) {
         pcl::uint64_t stamp;
         stamp = sweep->header.stamp;
@@ -100,6 +71,14 @@ class SimpleHDLGrabber
         count = 0;
         last = now;
       }
+#else
+		pcl::uint64_t stamp;
+		stamp = sweep->header.stamp;
+		time_t systemTime = static_cast<time_t>(((stamp & 0xffffffff00000000l) >> 32) & 0x00000000ffffffff);
+		pcl::uint32_t usec = static_cast<pcl::uint32_t>(stamp & 0x00000000ffffffff);
+		std::cout << "systemTime: " << systemTime
+			<< " lidar timestamp: " << usec << std::endl;
+#endif
     }
 
     void 
@@ -110,9 +89,9 @@ class SimpleHDLGrabber
 
       pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZI>);
       interface.raw2PointCloud(*scan , point_cloud_ptr);
-//      this->viewer.showCloud (point_cloud_ptr);
-      printf("sweep size %d\n", scan->sweeps_size());
+      this->viewer.showCloud (point_cloud_ptr);
       /*
+      printf("sweep size %d\n", scan->sweeps_size());
       for(int i = 0 ; i < scan->sweeps_size() ; i ++)
       {
         printf("measure%d size %d\n", i , scan->sweeps(i).meas_size());
@@ -161,9 +140,12 @@ class SimpleHDLGrabber
 int main(int argc , char** argv)
 {
 	std::string hdlCalibration("");
-	std::string pcapFile("/home/hesai/Downloads/hesai.pcap");
+	std::string pcapFile("/home/ys/Downloads/pangu.pcap");
 
-	std::cout<<hdlCalibration<<std::endl;
+	pcl::console::parse_argument (argc, argv, "-calibrationFile", hdlCalibration);
+	pcl::console::parse_argument (argc, argv, "-pcapFile", pcapFile);
+
+	std::cout<< pcapFile <<std::endl;
 
 	SimpleHDLGrabber grabber (hdlCalibration, pcapFile);
 	grabber.run ();
