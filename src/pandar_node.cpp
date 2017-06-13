@@ -106,7 +106,7 @@ void SimpleGrabber::cloud_callback(const boost::shared_ptr<const pcl::PointCloud
 		dpt.intensity = spt.intensity;
 	}
 	points->header.frame_id = frame_id_;
-	points->header.stamp = cloud->header.stamp & 0x000FFFFFFFFFFFFF;
+	points->header.stamp = cloud->header.stamp & 0x0007FFFFFFFFFFFF;
 	points->height = 1;
 	points->width = points->size();
 	cloud_pub_.publish(points);
