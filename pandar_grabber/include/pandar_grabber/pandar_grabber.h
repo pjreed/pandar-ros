@@ -205,6 +205,9 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
      */
     void raw2PointCloud(const hesai::Scan& scan, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud);
 
+    
+    void raw2PointCloudRGB(const hesai::Scan& scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr& cloud);
+
     /** \brief Allows one to customize the colors used for each of the lasers.
      */
     void
@@ -313,6 +316,9 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
                  int azimuth,
                  HS_LIDAR_L40_Unit laserReturn,
                  PandarLaserCorrection correction);
+    void computeXYZRGB (pcl::PointXYZRGBA& point,
+                              const hesai::Scan_Measure& meas,
+                              PandarLaserCorrection correction);
 
     void
     computeXYZIfromRaw (pcl::PointXYZI& point,
