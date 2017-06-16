@@ -9,6 +9,7 @@ if(NOT PCL_FOUND)
 	find_package(PCL REQUIRED)
 endif()
 
+list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 if(CMAKE_CURRENT_LIST_DIR STREQUAL CMAKE_SOURCE_DIR)
 	add_executable (test_grabber test/grabber_test.cpp)
 	target_link_libraries (test_grabber
