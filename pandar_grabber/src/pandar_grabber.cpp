@@ -308,6 +308,7 @@ pcl::PandarGrabber::~PandarGrabber () throw ()
   disconnect_all_slots<sig_cb_Hesai_Pandar_scan_point_cloud_xyzrgb> ();
   disconnect_all_slots<sig_cb_Hesai_Pandar_scan_point_cloud_xyzi> ();
 }
+void HS_getColorMapFromIndensity(int Indensity_map , unsigned char *RGB /* 3bytes */);
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -348,30 +349,15 @@ pcl::PandarGrabber::initialize (const std::string& correctionsFile)
   current_sweep_xyz_.reset (new pcl::PointCloud<pcl::PointXYZ>);
   current_sweep_xyzi_.reset (new pcl::PointCloud<pcl::PointXYZI>);
 
-  for (int i = 0; i < Pandar_MAX_NUM_LASERS; i++)
-    laser_rgb_mapping_[i].r = laser_rgb_mapping_[i].g = laser_rgb_mapping_[i].b = 0;
+  for (int i = 0; i < 255; i++)
+  {
+    unsigned char RGB[3];
+    HS_getColorMapFromIndensity(i , RGB);
+    laser_rgb_mapping_[i].r = RGB[0];
+    laser_rgb_mapping_[i].g = RGB[1];
+    laser_rgb_mapping_[i].b = RGB[2];
+  }
 
-  if (laser_corrections_[32].distanceCorrection == 0.0)
-  {
-    for (int i = 0; i < 16; i++)
-    {
-      laser_rgb_mapping_[i * 2].b = static_cast<uint8_t> (i * 6 + 64);
-      laser_rgb_mapping_[i * 2 + 1].b = static_cast<uint8_t> ( (i + 16) * 6 + 64);
-    }
-  }
-  else
-  {
-    for (int i = 0; i < 16; i++)
-    {
-      laser_rgb_mapping_[i * 2].b = static_cast<uint8_t> (i * 3 + 64);
-      laser_rgb_mapping_[i * 2 + 1].b = static_cast<uint8_t> ( (i + 16) * 3 + 64);
-    }
-    for (int i = 0; i < 16; i++)
-    {
-      laser_rgb_mapping_[i * 2 + 32].b = static_cast<uint8_t> (i * 3 + 160);
-      laser_rgb_mapping_[i * 2 + 33].b = static_cast<uint8_t> ( (i + 16) * 3 + 160);
-    }
-  }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -576,7 +562,13 @@ pcl::PandarGrabber::toPointClouds (HS_LIDAR_L40_Packet *dataPacket)
       }
       hesai::Scan_Measure *measurement = record_sweeps[j]->add_meas();
       measurement->set_range(static_cast<float>(firing_data.units[j].distance) / 500.0);
-      measurement->set_intensity(static_cast<float>(firing_data.units[j].reflectivity >> 8));
+      measurement->set_intensity(static_cast<float>(firing_data.units[j].reflectivity >> 8 & 0xff));
+      int after = (int)measurement->intensity();
+      if(after != (firing_data.units[j].reflectivity >> 8 & 0xff))
+      {
+        printf("ERRRRRRR\n");
+      }
+
       measurement->set_azimuth(static_cast<float>(firing_data.Azimuth) / 100.0);
       /* fill scan raw data */
 
@@ -590,7 +582,7 @@ pcl::PandarGrabber::toPointClouds (HS_LIDAR_L40_Packet *dataPacket)
       xyz.y = xyzrgb.y = xyzi.y;
       xyz.z = xyzrgb.z = xyzi.z;
 
-      xyzrgb.rgba = laser_rgb_mapping_[j].rgba;
+      xyzrgb.rgba = laser_rgb_mapping_[firing_data.units[j].reflectivity >> 8].rgba;
       if (pcl_isnan (xyz.x) || pcl_isnan (xyz.y) || pcl_isnan (xyz.z))
       {
         continue;
@@ -727,6 +719,119 @@ void pcl::PandarGrabber::raw2PointCloud(const hesai::Scan& scan, pcl::PointCloud
       PointXYZI xyzi;
       computeXYZIfromRaw (xyzi, mean, laser_corrections_[i]);
       cloud->push_back (xyzi);
+    }
+  }
+}
+
+void HS_getColorMapFromIndensity(int Indensity_map , unsigned char *RGB /* 3bytes */)
+{
+  // unsigned int Indensity_map = (Indensity >> 8) & 0xff;
+  if(Indensity_map <= 100)
+  {
+    if(Indensity_map <= 34)
+    {
+      // constant blue , + green
+      int Green = (Indensity_map * 255 / 34); // map to 256 range
+      RGB[0] = 0x0;
+      RGB[1] = Green  & 0xff;
+      RGB[2] = 0xff;
+    }
+    else if(Indensity_map <= 67)
+    {
+      // constant green , -blue
+      int Blue = (((67 - Indensity_map) * 255) / 33); // map to 256 range
+      RGB[0] = 0x0;
+      RGB[1] = 0xff;
+      RGB[2] = Blue & 0xff ;
+    }
+    else
+    {
+      // constant green , + red
+      int Red = (((Indensity_map - 67) * 255) / 33); // map to 256 range
+      RGB[0] = Red & 0xff;
+      RGB[1] = 0xff;
+      RGB[2] = 0x0;
+
+    }
+  }
+  else
+  {
+    // constant red , - green
+    int Green = (((255 - Indensity_map) * 255) / (256 - 100)); // map to 256 range
+    RGB[0] = 0xff;
+    RGB[1] = Green  & 0xff;
+    RGB[2] = 0x0;
+  }
+}
+void
+pcl::PandarGrabber::computeXYZRGB (pcl::PointXYZRGBA& point,
+                              const hesai::Scan_Measure& meas,
+                              PandarLaserCorrection correction)
+{
+  double cos_azimuth, sin_azimuth;
+
+  double distanceM = meas.range();
+
+  // std::cout<<correction.horizontalOffsetCorrection <<std::endl;
+
+  point.rgba = laser_rgb_mapping_[(int)meas.intensity()].rgba;
+
+  // point.intensity = meas.intensity();
+
+  if (distanceM < min_distance_threshold_ || distanceM > max_distance_threshold_)
+  {
+    point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN ();
+    return;
+  }
+  // std::cout<<"1"<<correction.azimuthCorrection<<std::endl;
+  if (correction.azimuthCorrection == 0)
+  {
+    // cos_azimuth = cos_lookup_table_[static_cast<int>(meas.azimuth() * 100.0)];
+    // sin_azimuth = sin_lookup_table_[static_cast<int>(meas.azimuth() * 100.0)];
+
+    double rad = (M_PI / 180.0) * meas.azimuth();
+    cos_azimuth = std::cos (rad);
+    sin_azimuth = std::sin (rad);
+  }
+  else
+  {
+    // std::cout<<"2"<<correction.azimuthCorrection<<std::endl;
+    double azimuthInRadians = Pandar_Grabber_toRadians( meas.azimuth() + correction.azimuthCorrection);
+    cos_azimuth = std::cos (azimuthInRadians);
+    sin_azimuth = std::sin (azimuthInRadians);
+  }
+
+  distanceM += correction.distanceCorrection;
+
+  double xyDistance = distanceM * correction.cosVertCorrection;
+
+  point.x = static_cast<float> (xyDistance * sin_azimuth - correction.horizontalOffsetCorrection * cos_azimuth);
+  point.y = static_cast<float> (xyDistance * cos_azimuth + correction.horizontalOffsetCorrection * sin_azimuth);
+  point.z = static_cast<float> (distanceM * correction.sinVertCorrection + correction.verticalOffsetCorrection);
+  if (point.x == 0 && point.y == 0 && point.z == 0)
+  {
+    point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN ();
+  }
+}
+
+
+void pcl::PandarGrabber::raw2PointCloudRGB(const hesai::Scan& scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr& cloud)
+{
+  if(!cloud)
+  {
+    std::cout<<"raw2PointCloud Bad Parameter"<<std::endl;
+    return;
+  }
+
+  for(int i = 0; i < scan.sweeps_size() ; i++)
+  {
+    hesai::Scan_Sweep sweep = scan.sweeps(i);
+    for(int j = 0 ; j < sweep.meas_size() ; j++)
+    {
+      hesai::Scan_Measure mean = sweep.meas(j);
+      PointXYZRGBA xyzrgb;
+      computeXYZRGB (xyzrgb, mean, laser_corrections_[i]);
+      cloud->push_back (xyzrgb);
     }
   }
 }

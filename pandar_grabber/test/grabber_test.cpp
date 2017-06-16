@@ -49,7 +49,7 @@ class SimpleHDLGrabber
 
     void 
     sweepScan (
-        const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZI> >& sweep)
+        const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA> >& sweep)
     {
     	// this->viewer.showCloud (sweep);
     	// sleep(10);
@@ -78,6 +78,8 @@ class SimpleHDLGrabber
 		pcl::uint32_t usec = static_cast<pcl::uint32_t>(stamp & 0x00000000ffffffff);
 		std::cout << "systemTime: " << systemTime
 			<< " lidar timestamp: " << usec << std::endl;
+
+      // this->viewer.showCloud (sweep);
 #endif
     }
 
@@ -87,9 +89,11 @@ class SimpleHDLGrabber
     {
 
 
-      pcl::PointCloud<pcl::PointXYZI>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZI>);
-      interface.raw2PointCloud(*scan , point_cloud_ptr);
-      this->viewer.showCloud (point_cloud_ptr);
+      pcl::PointCloud<pcl::PointXYZRGBA>::Ptr point_cloudRGB_ptr (new pcl::PointCloud<pcl::PointXYZRGBA>);
+      point_cloudRGB_ptr->is_dense = false;
+      interface.raw2PointCloudRGB(*scan , point_cloudRGB_ptr);
+
+      this->viewer.showCloud (point_cloudRGB_ptr);
       /*
       printf("sweep size %d\n", scan->sweeps_size());
       for(int i = 0 ; i < scan->sweeps_size() ; i ++)
@@ -116,7 +120,7 @@ class SimpleHDLGrabber
       // boost::signals2::connection c = interface.registerCallback(f);
 
       // Register a callback function that gets complete 360 degree sweeps.
-      boost::function<void(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZI> >&)> f2 = boost::bind(
+      boost::function<void(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA> >&)> f2 = boost::bind(
           &SimpleHDLGrabber::sweepScan, this, _1);
       boost::signals2::connection c2 = interface.registerCallback(f2);
 
