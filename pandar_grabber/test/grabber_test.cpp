@@ -17,13 +17,28 @@ class SimpleHDLGrabber
 {
   public:
     std::string calibrationFile, pcapFile;
+	std::string ip_;
+	int port_;
     pcl::visualization::CloudViewer viewer;
     pcl::PandarGrabber interface;
 
     SimpleHDLGrabber (std::string& calibFile, std::string& pcapFile) 
       : calibrationFile (calibFile)
       , pcapFile (pcapFile) 
+		, ip_("")
+		, port_(0)
       , interface (calibrationFile, pcapFile)
+      ,viewer("Simple Cloud Viewer")
+    {
+       
+    }
+
+    SimpleHDLGrabber (std::string& calibFile, std::string& ip, int port) 
+      : ip_(ip)
+		, port_(port)
+		, calibrationFile (calibFile)
+      , pcapFile ("") 
+      , interface (boost::asio::ip::address::from_string(ip), port, calibFile)
       ,viewer("Simple Cloud Viewer")
     {
        
@@ -145,13 +160,24 @@ int main(int argc , char** argv)
 {
 	std::string hdlCalibration("");
 	std::string pcapFile("/home/ys/Downloads/pangu.pcap");
+	std::string ip("");
+	int port;
 
 	pcl::console::parse_argument (argc, argv, "-calibrationFile", hdlCalibration);
 	pcl::console::parse_argument (argc, argv, "-pcapFile", pcapFile);
+	pcl::console::parse_argument (argc, argv, "-ip", ip);
+	pcl::console::parse_argument (argc, argv, "-port", port);
 
-	std::cout<< pcapFile <<std::endl;
+	std::cout<< "pcapFile: " << pcapFile <<std::endl;
+	std::cout << "ip " << ip << " port " << port;
 
-	SimpleHDLGrabber grabber (hdlCalibration, pcapFile);
-	grabber.run ();
+	if (ip == "") {
+		SimpleHDLGrabber grabber (hdlCalibration, pcapFile);
+		grabber.run ();
+	} else {
+		SimpleHDLGrabber grabber (hdlCalibration, ip, port);
+		grabber.run ();
+	}
+
 	return 0;
 }

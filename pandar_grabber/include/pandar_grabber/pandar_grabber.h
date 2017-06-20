@@ -341,7 +341,7 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
     boost::thread *queue_consumer_thread_;
     boost::thread *Pandar_read_packet_thread_;
     bool terminate_read_packet_thread_;
-    pcl::RGB laser_rgb_mapping_[Pandar_MAX_NUM_LASERS];
+    pcl::RGB laser_rgb_mapping_[256];
     float min_distance_threshold_;
     float max_distance_threshold_;
 
