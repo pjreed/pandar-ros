@@ -7,8 +7,6 @@ This package runs as an ROS node. The data from Pandar40 LIDAR can be either gra
 1. libpcap-dev  
   On Ubuntu, `sudo apt-get install libpcap-dev`
 2. pcl >= 1.7  
-3. protocal buffer  
-  On Ubuntu, `sudo apt-get install protobuf-compiler libprotobuf-dev`
 
 ## Compile
 ```
@@ -18,11 +16,11 @@ catkin_make
 ## Run
 - live data from ethernet  
 ```
-roslaunch pandar_ros pandar.launch device_ip:=<device ip> port:=<port>
+roslaunch pandar_ros pandar.launch device_ip:=<device ip> port:=<port> calib:=<path to .csv calibration file>
 ```
 - read data from pcap file  
 ```
-roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file>
+roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file> calib:=<path to .csv calibration file>
 ```
 
 ### Message Published 
@@ -31,6 +29,7 @@ roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file>
 ## Tested environment
 * ROS indigo on Ubuntu14.04
 * ROS kinetic on Ubuntu16.04
+* ROS jade on Ubuntu14.04
 
 ## [Download sample data](http://www.hesaitech.com/un-file.html?backUrl=/autonomous_driving.html)
 
@@ -44,8 +43,6 @@ roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file>
 1. libpcap-dev  
   On Ubuntu, `sudo apt-get install libpcap-dev`
 2. pcl >= 1.7  
-3. protocal buffer  
-  On Ubuntu, `sudo apt-get install protobuf-compiler libprotobuf-dev`
 
 ## 编译
 ```
@@ -55,11 +52,11 @@ catkin_make
 ## 运行
 从以太网中读取实时雷达数据
 ```
-roslaunch pandar_ros pandar.launch device_ip:=<device ip> port:=<port>
+roslaunch pandar_ros pandar.launch device_ip:=<device ip> port:=<port> calib:=<path to .csv calibration file>
 ```
 从pcap文件中读取雷达数据
 ```
-roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file>
+roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file> calib:=<path to .csv calibration file>
 ```
 
 ### 发布的消息 
@@ -68,5 +65,6 @@ roslaunch pandar_ros pandar.launch pcap:=<full path to pcap file>
 ## 测试过的环境
 * ROS indigo on Ubuntu14.04
 * ROS kinetic on Ubuntu16.04
+* ROS jade on Ubuntu14.04
 
 ## [数据下载地址](http://www.hesaitech.com/un-file.html?backUrl=/autonomous_driving.html)
