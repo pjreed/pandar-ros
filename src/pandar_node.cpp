@@ -45,6 +45,7 @@ private:
 	std::string ip_;
 	std::string frame_id_;
 	std::string pcap_;
+	std::string calib_;
 	int port_;
 
 	void cloud_callback(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZI> >& cloud);
@@ -70,6 +71,8 @@ SimpleGrabber::SimpleGrabber(ros::NodeHandle& nh):
 	nh_.param<std::string>("frame_id", frame_id_, "pandar");
 	nh_.param<int>("port", port_, 2368);
 	nh_.param<std::string>("pcap", pcap_, "");
+	nh_.param<std::string>("calib", calib_, "");
+	ROS_INFO_STREAM("calibration file: " << calib_);
 	if (ip_ != "") {
 		ROS_INFO_STREAM("grabber listening on " << ip_ << " port " << port_);
 		grabber_.reset(new pcl::PandarGrabber(boost::asio::ip::address::from_string(ip_),
@@ -81,7 +84,6 @@ SimpleGrabber::SimpleGrabber(ros::NodeHandle& nh):
 	} else {
 		ROS_ERROR_STREAM("no ip address spicified, no pcap file provided, what can I do for you...");
 	}
-//	cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("pandar_points", 10);
 	cloud_pub_ = nh_.advertise<pcl::PointCloud<pcl::PointXYZI> >("pandar_points", 10);
 }
 

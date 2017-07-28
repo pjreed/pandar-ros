@@ -4,7 +4,6 @@ project(pandar_grabber)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(PCAP REQUIRED)
 
-add_subdirectory(proto)
 if(NOT PCL_FOUND)
 	find_package(PCL REQUIRED)
 endif()
@@ -31,5 +30,5 @@ target_include_directories(${PROJECT_NAME} SYSTEM PUBLIC
 target_link_libraries(${PROJECT_NAME}
 	${PCL_LIBRARIES}
 	${PCAP_LIBRARY}
-	lidar_frame
 	)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_auto_type)

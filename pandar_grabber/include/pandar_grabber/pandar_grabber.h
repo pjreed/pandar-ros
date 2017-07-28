@@ -48,8 +48,6 @@
 #include <boost/asio.hpp>
 #include <string>
 
-#include "proto/lidar_frame.pb.h"
-
 // Start of Packet & Packet Angle size , SOF 2bytes , Angle 2 bytes
 #define HS_LIDAR_L40_SOP_ANGLE_SIZE (4)
 // Unit size = distance(3bytes) + reflectivity(2bytes) for each Line
@@ -103,39 +101,6 @@ namespace pcl
 class PCL_EXPORTS  PandarGrabber : public Grabber
 {
   public:
-    /** \brief Signal used for a single sector
-     *         Represents 1 corrected packet from the Pandar Hesai
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_scan_raw_data) (const boost::shared_ptr<const hesai::Scan >&);
-
-    /** \brief Signal used for a single sector
-     *         Represents 1 corrected packet from the Pandar Hesai
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_scan_point_cloud_xyz) (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZ> >&,
-                                                float,
-                                                float);
-    /** \brief Signal used for a single sector
-     *         Represents 1 corrected packet from the Pandar Hesai.  Each laser has a different RGB
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_scan_point_cloud_xyzrgb) (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA> >&,
-                                                   float,
-                                                   float);
-    /** \brief Signal used for a single sector
-     *         Represents 1 corrected packet from the Pandar Hesai with the returned intensity.
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_scan_point_cloud_xyzi) (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZI> >&,
-                                                 float startAngle,
-                                                 float);
-    /** \brief Signal used for a 360 degree sweep
-     *         Represents multiple corrected packets from the Pandar Hesai
-     *         This signal is sent when the Hesai passes angle "0"
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_sweep_point_cloud_xyz) (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZ> >&);
     /** \brief Signal used for a 360 degree sweep
      *         Represents multiple corrected packets from the Pandar Hesai with the returned intensity
      *         This signal is sent when the Hesai passes angle "0"
@@ -145,13 +110,6 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
     /** \brief Signal used for a 360 degree sweep
      *         Represents multiple corrected packets from the Pandar Hesai
      *         This signal is sent when the Hesai passes angle "0".  Each laser has a different RGB
-     */
-    typedef void
-    (sig_cb_Hesai_Pandar_sweep_point_cloud_xyzrgb) (const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZRGBA> >&);
-
-    /** \brief Constructor taking an optional path to an Pandar corrections file.  The Grabber will listen on the default IP/port for data packets [192.168.3.255/2368]
-     * \param[in] correctionsFile Path to a file which contains the correction parameters for the Pandar.  This parameter is mandatory for the Pandar-64, optional for the Pandar-32
-     * \param[in] pcapFile Path to a file which contains previously captured data packets.  This parameter is optional
      */
     PandarGrabber (const std::string& correctionsFile = "",
                 const std::string& pcapFile = "");
@@ -200,19 +158,6 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
     void
     filterPackets (const boost::asio::ip::address& ipAddress,
                    const unsigned short port = 443);
-
-    /** \brief Convert raw data to point cloud
-     */
-    void raw2PointCloud(const hesai::Scan& scan, pcl::PointCloud<pcl::PointXYZI>::Ptr& cloud);
-
-    
-    void raw2PointCloudRGB(const hesai::Scan& scan, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr& cloud);
-
-    /** \brief Allows one to customize the colors used for each of the lasers.
-     */
-    void
-    setLaserColorRGB (const pcl::RGB& color,
-                      unsigned int laserNumber);
 
     /** \brief Any returns from the Pandar with a distance less than this are discarded.
      *         This value is in meters
@@ -292,43 +237,19 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
 
     PandarLaserCorrection laser_corrections_[Pandar_MAX_NUM_LASERS];
     unsigned int last_azimuth_;
-    boost::shared_ptr<hesai::Scan> current_scan_raw_;
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZ> > current_scan_xyz_, current_sweep_xyz_;
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI> > current_scan_xyzi_, current_sweep_xyzi_;
-    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGBA> > current_scan_xyzrgb_, current_sweep_xyzrgb_;
-    boost::signals2::signal<sig_cb_Hesai_Pandar_sweep_point_cloud_xyz>* sweep_xyz_signal_;
-
-    boost::signals2::signal<sig_cb_Hesai_Pandar_sweep_point_cloud_xyzrgb>* sweep_xyzrgb_signal_;
+    boost::shared_ptr<pcl::PointCloud<pcl::PointXYZI> > current_sweep_xyzi_;
     boost::signals2::signal<sig_cb_Hesai_Pandar_sweep_point_cloud_xyzi>* sweep_xyzi_signal_;
-    boost::signals2::signal<sig_cb_Hesai_Pandar_scan_raw_data>* scan_raw_signal_;
-    boost::signals2::signal<sig_cb_Hesai_Pandar_scan_point_cloud_xyz>* scan_xyz_signal_;
-    boost::signals2::signal<sig_cb_Hesai_Pandar_scan_point_cloud_xyzrgb>* scan_xyzrgb_signal_;
-    boost::signals2::signal<sig_cb_Hesai_Pandar_scan_point_cloud_xyzi>* scan_xyzi_signal_;
 
     void
     fireCurrentSweep ();
 
     void
-    fireCurrentScan (const unsigned short startAngle,
-                     const unsigned short endAngle);
-    void
     computeXYZI (pcl::PointXYZI& pointXYZI,
                  int azimuth,
                  HS_LIDAR_L40_Unit laserReturn,
                  PandarLaserCorrection correction);
-    void computeXYZRGB (pcl::PointXYZRGBA& point,
-                              const hesai::Scan_Measure& meas,
-                              PandarLaserCorrection correction);
-
-    void
-    computeXYZIfromRaw (pcl::PointXYZI& point,
-                              const hesai::Scan_Measure& meas,
-                              PandarLaserCorrection correction);
-
 
   private:
-    hesai::Scan_Sweep* record_sweeps[Pandar_MAX_NUM_LASERS];
-
     static double *cos_lookup_table_;
     static double *sin_lookup_table_;
     pcl::SynchronizedQueue<unsigned char *> Pandar_data_;
@@ -341,7 +262,6 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
     boost::thread *queue_consumer_thread_;
     boost::thread *Pandar_read_packet_thread_;
     bool terminate_read_packet_thread_;
-    pcl::RGB laser_rgb_mapping_[256];
     float min_distance_threshold_;
     float max_distance_threshold_;
 
@@ -365,7 +285,7 @@ class PCL_EXPORTS  PandarGrabber : public Grabber
     loadCorrectionsFile (const std::string& correctionsFile);
 
     void
-    loadPandar40Corrections ();
+    loadPandar40DefaultCorrections ();
 
     void
     readPacketsFromSocket ();
