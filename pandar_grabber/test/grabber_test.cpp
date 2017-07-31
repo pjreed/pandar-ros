@@ -54,7 +54,6 @@ class SimpleHDLGrabber
     void 
     run () 
     {
-      
       // make callback function from member function
       boost::function<void(const boost::shared_ptr<const pcl::PointCloud<pcl::PointXYZI> >&)> f =
           boost::bind(&SimpleHDLGrabber::rawCloud, this, _1);
