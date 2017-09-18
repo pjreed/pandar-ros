@@ -223,12 +223,57 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     }
 }
 
+static int PandarEnableList[LASER_COUNT] = {
+	1,
+	1,
+	1,
+	1,
+	0,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	1,
+	0,
+	0,
+	0,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1,
+	1
+};
+
 void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 {
     for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
 		const raw_block_t& firing_data = packet->blocks[i];
 
         for (int j = 0; j < LASER_COUNT; j++) {
+	    if(PandarEnableList[j] != 1)
+		continue;
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
 					firing_data.measures[j], calibration_.laser_corrections[j]);
