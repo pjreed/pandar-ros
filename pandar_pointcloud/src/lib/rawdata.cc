@@ -217,6 +217,11 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     point.x = static_cast<float> (xyDistance * sin_azimuth - correction.horizontalOffsetCorrection * cos_azimuth);
     point.y = static_cast<float> (xyDistance * cos_azimuth + correction.horizontalOffsetCorrection * sin_azimuth);
     point.z = static_cast<float> (distanceM * correction.sinVertCorrection + correction.verticalOffsetCorrection);
+
+    float a = point.x;
+    point.x = - point.y;
+    point.y = a;
+
     if (point.x == 0 && point.y == 0 && point.z == 0)
     {
         point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN ();
@@ -286,6 +291,77 @@ void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 			pc.width++;
         }
     }
+}
+
+// void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
+// {
+//     for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
+//         const raw_block_t& firing_data = packet->blocks[i];
+
+//         for (int j = 0; j < LASER_COUNT; j++) {
+//         if(PandarEnableList[j] != 1)
+//         continue;
+//             PPoint xyzir;
+//             computeXYZIR (xyzir, firing_data.azimuth,
+//                     firing_data.measures[j], calibration_.laser_corrections[j]);
+//             if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+//             {
+//                 continue;
+//             }
+//             xyzir.ring = j;
+//             pc.points.push_back(xyzir);
+//             pc.width++;
+//         }
+//     }
+// }
+
+void RawData::toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc)
+{
+    for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
+        const raw_block_t& firing_data = packet->blocks[i];
+            PPoint xyzir;
+            computeXYZIR (xyzir, firing_data.azimuth,
+                    firing_data.measures[laser], calibration_.laser_corrections[laser]);
+            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            // {
+            //     continue;
+            // }
+            xyzir.ring = laser;
+            pc.points.push_back(xyzir);
+    }
+}
+
+void RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc)
+{
+    raw_packet_t *packets = new raw_packet_t[scanMsg->packets.size()];
+    // process each packet provided by the driver
+    for (size_t i = 0; i < scanMsg->packets.size(); ++i)
+    {
+        parseRawData(&packets[i], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
+        pc.width += BLOCKS_PER_PACKET;
+    }
+
+    for(int i = 0 ; i < LASER_COUNT ; i++)
+    {
+        if(PandarEnableList[i] == 1)
+        {
+            for (size_t j = 0; j < scanMsg->packets.size(); ++j)
+            {
+                toPointClouds(&packets[j] , i , pc);
+            }
+        }
+    }
+
+    for(int i = 0 ; i < LASER_COUNT ; i++)
+    {
+        if(PandarEnableList[i] == 1)
+        {
+            pc.height++;
+        }
+    }
+
+
+    delete packets;
 }
 
 /** @brief convert raw packet to point cloud
