@@ -61,6 +61,7 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     pandar_rawdata::PPointCloud::Ptr outMsg(new pandar_rawdata::PPointCloud());
     // outMsg's header is a pcl::PCLHeader, convert it before stamp assignment
     pcl_conversions::toPCL(ros::Time::now(), outMsg->header.stamp);
+    outMsg->is_dense = false;
     outMsg->header.frame_id = scanMsg->header.frame_id;
     outMsg->height = 0;
     outMsg->height = 0;
