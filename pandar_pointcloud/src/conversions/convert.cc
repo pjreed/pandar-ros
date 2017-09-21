@@ -38,7 +38,7 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh):
 
     // subscribe to PandarScan packets
     pandar_scan_ =
-        node.subscribe("pandar_packets", 10,
+        node.subscribe("pandar_packets", 100,
                        &Convert::processScan, (Convert *) this,
                        ros::TransportHints().tcpNoDelay(true));
 }
@@ -66,17 +66,21 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     outMsg->height = 0;
     outMsg->height = 0;
 
+
+
     // process each packet provided by the driver
     // for (size_t i = 0; i < scanMsg->packets.size(); ++i)
     // {
     //     data_->unpack(scanMsg->packets[i], *outMsg);
     // }
-    data_->unpack(scanMsg, *outMsg);
+    int ret = data_->unpack(scanMsg, *outMsg);
 
     // publish the accumulated cloud message
 	ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
 					 << " Pandar40 points, time: " << outMsg->header.stamp);
-    output_.publish(outMsg);
+
+    if(ret == 1)
+        output_.publish(outMsg);
 }
 
 } // namespace pandar_pointcloud
