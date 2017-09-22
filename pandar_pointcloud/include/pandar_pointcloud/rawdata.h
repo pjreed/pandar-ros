@@ -162,6 +162,8 @@ private:
 
     raw_packet_t *bufferPacket;
     int bufferPacketSize;
+
+    int currentPacketStart;
 };
 
 } // namespace pandar_rawdata

@@ -102,7 +102,7 @@ PandarDriver::PandarDriver(ros::NodeHandle node,
  */
 bool PandarDriver::poll(void)
 {
-  int readpacket = 1;
+  int readpacket = 100;
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
   pandar_msgs::PandarScanPtr scan(new pandar_msgs::PandarScan);
   scan->packets.resize(readpacket);

@@ -353,14 +353,21 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
 
 int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc)
 {
-    parseRawData(&bufferPacket[bufferPacketSize++], &scanMsg->packets[0].data[0], scanMsg->packets[0].data.size());
-
+    currentPacketStart = bufferPacketSize == 0 ? 0 :bufferPacketSize -1 ;
+    for (int i = 0; i < scanMsg->packets.size(); ++i)
+    {
+        /* code */
+        parseRawData(&bufferPacket[bufferPacketSize++], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
+    }
+    
+    // ROS_ERROR("currentPacketStart %d bufferPacketSize %d " , currentPacketStart , bufferPacketSize);
     int hasAframe = 0;
     int currentBlockEnd = 0;
+    int currentPacketEnd = 0;
     if(bufferPacketSize > 1)
     {
         int lastAzumith = -1;
-        for(int i = bufferPacketSize - 2 ; i < bufferPacketSize ; i++)
+        for(int i = currentPacketStart ; i < bufferPacketSize ; i++)
         {
             if(hasAframe)
             {
@@ -368,7 +375,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
             }
 
             int j = 0;
-            if (i == bufferPacketSize - 2)
+            if (i == currentPacketStart)
             {
                 /* code */
                 j = lastBlockEnd;
@@ -391,6 +398,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                 {
                     currentBlockEnd = j;
                     hasAframe = 1;
+                    currentPacketEnd = i;
                     break;
                 }
             }
@@ -404,7 +412,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
             if(PandarEnableList[i] == 1)
             {
                 int j = 0;
-                for (int k = 0; k < bufferPacketSize; ++k)
+                for (int k = 0; k < (currentPacketEnd + 1); ++k)
                 {
                     if(k == 0)
                         j = lastBlockEnd;
@@ -414,7 +422,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                     for (; j < BLOCKS_PER_PACKET; ++j)
                     {
                         /* code */
-                        if (currentBlockEnd == j && k == (bufferPacketSize-1))
+                        if (currentBlockEnd == j && k == (currentPacketEnd))
                         {
                             break;
                         }
@@ -425,8 +433,8 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
             }
         }
 
-        memcpy(&bufferPacket[0] , &bufferPacket[bufferPacketSize-1] , sizeof(raw_packet_t));
-        bufferPacketSize = 1;
+        memcpy(&bufferPacket[0] , &bufferPacket[currentPacketEnd] , sizeof(raw_packet_t) * (bufferPacketSize - currentPacketEnd));
+        bufferPacketSize = bufferPacketSize - currentPacketEnd;
         lastBlockEnd = currentBlockEnd;
 
         for(int i = 0 ; i < LASER_COUNT ; i++)
