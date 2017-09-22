@@ -448,7 +448,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         pc.width /= pc.height;
         if(pc.width > 1900 || pc.width < 1700)
         {
-            ROS_ERROR("SSS ");
+            ROS_INFO("SSS ");
         }
 
         return 1;
