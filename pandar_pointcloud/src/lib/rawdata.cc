@@ -221,9 +221,9 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     point.y = static_cast<float> (xyDistance * cos_azimuth + correction.horizontalOffsetCorrection * sin_azimuth);
     point.z = static_cast<float> (distanceM * correction.sinVertCorrection + correction.verticalOffsetCorrection);
 
-    float a = point.x;
-    point.x = - point.y;
-    point.y = a;
+    // float a = point.x;
+    // point.x = - point.y;
+    // point.y = a;
 
     if (point.x == 0 && point.y == 0 && point.z == 0)
     {
@@ -325,10 +325,10 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc)
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
                     firing_data.measures[laser], calibration_.laser_corrections[laser]);
-            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
-            // {
-            //     continue;
-            // }
+            if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            {
+                continue;
+            }
             xyzir.ring = laser;
             pc.points.push_back(xyzir);
     }
@@ -342,12 +342,13 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
                     firing_data.measures[laser], calibration_.laser_corrections[laser]);
-            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
-            // {
-            //     continue;
-            // }
+            if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            {
+                return;
+            }
             xyzir.ring = laser;
             pc.points.push_back(xyzir);
+            pc.width++;
     }
 }
 
@@ -427,7 +428,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                             break;
                         }
                         toPointClouds(&bufferPacket[k] , i , j, pc);
-                        pc.width++;
+                        
                     } 
                 }
             }
@@ -437,15 +438,15 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         bufferPacketSize = bufferPacketSize - currentPacketEnd;
         lastBlockEnd = currentBlockEnd;
 
-        for(int i = 0 ; i < LASER_COUNT ; i++)
-        {
-            if(PandarEnableList[i] == 1)
-            {
-                pc.height++;
-            }
-        }
+        // for(int i = 0 ; i < LASER_COUNT ; i++)
+        // {
+        //     if(PandarEnableList[i] == 1)
+        //     {
+        //         pc.height++;
+        //     }
+        // }
 
-        pc.width /= pc.height;
+        // pc.width /= pc.height;
         // if(pc.width > 1900 || pc.width < 1700)
         // {
         //     ROS_INFO("This fram ");
