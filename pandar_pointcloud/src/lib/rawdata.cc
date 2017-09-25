@@ -232,45 +232,45 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
 }
 
 static int PandarEnableList[LASER_COUNT] = {
-	0,
 	1,
-	0,
+	1,
+	1,
     1,
-	0,
+	1,
     1,
-	0,
+	1,
     1,
-	0,
+	1,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
     1,
-    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
     1,
 };
 
@@ -446,10 +446,10 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         }
 
         pc.width /= pc.height;
-        if(pc.width > 1900 || pc.width < 1700)
-        {
-            ROS_INFO("SSS ");
-        }
+        // if(pc.width > 1900 || pc.width < 1700)
+        // {
+        //     ROS_INFO("This fram ");
+        // }
 
         return 1;
     }
