@@ -44,7 +44,11 @@ namespace pandar_rawdata
 ////////////////////////////////////////////////////////////////////////
 
 RawData::RawData()
-{}
+{
+    bufferPacket = new raw_packet_t[1000];
+    bufferPacketSize = 0;
+    lastBlockEnd = 0;
+}
 
 /** Update parameters: conversions and update */
 void RawData::setParameters(double min_range,
@@ -89,7 +93,6 @@ int RawData::setup(ros::NodeHandle private_nh)
     }
 
     ROS_INFO_STREAM("correction angles: " << config_.calibrationFile);
-
     calibration_.read(config_.calibrationFile);
     if (!calibration_.initialized) {
         ROS_ERROR_STREAM("Unable to open calibration file: " <<
@@ -217,11 +220,59 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     point.x = static_cast<float> (xyDistance * sin_azimuth - correction.horizontalOffsetCorrection * cos_azimuth);
     point.y = static_cast<float> (xyDistance * cos_azimuth + correction.horizontalOffsetCorrection * sin_azimuth);
     point.z = static_cast<float> (distanceM * correction.sinVertCorrection + correction.verticalOffsetCorrection);
+
+    float a = point.x;
+    point.x = - point.y;
+    point.y = a;
+
     if (point.x == 0 && point.y == 0 && point.z == 0)
     {
         point.x = point.y = point.z = std::numeric_limits<float>::quiet_NaN ();
     }
 }
+
+static int PandarEnableList[LASER_COUNT] = {
+	0,
+	1,
+	0,
+    1,
+	0,
+    1,
+	0,
+    1,
+	0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+    0,
+    1,
+};
 
 void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 {
@@ -229,6 +280,8 @@ void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 		const raw_block_t& firing_data = packet->blocks[i];
 
         for (int j = 0; j < LASER_COUNT; j++) {
+	    if(PandarEnableList[j] != 1)
+		continue;
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
 					firing_data.measures[j], calibration_.laser_corrections[j]);
@@ -241,6 +294,332 @@ void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 			pc.width++;
         }
     }
+}
+
+// void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
+// {
+//     for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
+//         const raw_block_t& firing_data = packet->blocks[i];
+
+//         for (int j = 0; j < LASER_COUNT; j++) {
+//         if(PandarEnableList[j] != 1)
+//         continue;
+//             PPoint xyzir;
+//             computeXYZIR (xyzir, firing_data.azimuth,
+//                     firing_data.measures[j], calibration_.laser_corrections[j]);
+//             if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+//             {
+//                 continue;
+//             }
+//             xyzir.ring = j;
+//             pc.points.push_back(xyzir);
+//             pc.width++;
+//         }
+//     }
+// }
+
+void RawData::toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc)
+{
+    for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
+        const raw_block_t& firing_data = packet->blocks[i];
+            PPoint xyzir;
+            computeXYZIR (xyzir, firing_data.azimuth,
+                    firing_data.measures[laser], calibration_.laser_corrections[laser]);
+            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            // {
+            //     continue;
+            // }
+            xyzir.ring = laser;
+            pc.points.push_back(xyzir);
+    }
+}
+
+void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc)
+{
+    int i = block;
+    {
+        const raw_block_t& firing_data = packet->blocks[i];
+            PPoint xyzir;
+            computeXYZIR (xyzir, firing_data.azimuth,
+                    firing_data.measures[laser], calibration_.laser_corrections[laser]);
+            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            // {
+            //     continue;
+            // }
+            xyzir.ring = laser;
+            pc.points.push_back(xyzir);
+    }
+}
+
+int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc)
+{
+    currentPacketStart = bufferPacketSize == 0 ? 0 :bufferPacketSize -1 ;
+    for (int i = 0; i < scanMsg->packets.size(); ++i)
+    {
+        /* code */
+        parseRawData(&bufferPacket[bufferPacketSize++], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
+    }
+    
+    // ROS_ERROR("currentPacketStart %d bufferPacketSize %d " , currentPacketStart , bufferPacketSize);
+    int hasAframe = 0;
+    int currentBlockEnd = 0;
+    int currentPacketEnd = 0;
+    if(bufferPacketSize > 1)
+    {
+        int lastAzumith = -1;
+        for(int i = currentPacketStart ; i < bufferPacketSize ; i++)
+        {
+            if(hasAframe)
+            {
+                break;
+            }
+
+            int j = 0;
+            if (i == currentPacketStart)
+            {
+                /* code */
+                j = lastBlockEnd;
+            }
+            else
+            {
+                j = 0;
+            }
+            for (; j < BLOCKS_PER_PACKET; ++j)
+            {
+                /* code */
+                if(lastAzumith == -1)
+                {
+                    lastAzumith = bufferPacket[i].blocks[j].azimuth;
+                    continue;
+                }
+
+
+                if(lastAzumith > bufferPacket[i].blocks[j].azimuth)
+                {
+                    currentBlockEnd = j;
+                    hasAframe = 1;
+                    currentPacketEnd = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    if(hasAframe)
+    {
+        for(int i = 0 ; i < LASER_COUNT ; i++)
+        {
+            if(PandarEnableList[i] == 1)
+            {
+                int j = 0;
+                for (int k = 0; k < (currentPacketEnd + 1); ++k)
+                {
+                    if(k == 0)
+                        j = lastBlockEnd;
+                    else
+                        j = 0;
+                    
+                    for (; j < BLOCKS_PER_PACKET; ++j)
+                    {
+                        /* code */
+                        if (currentBlockEnd == j && k == (currentPacketEnd))
+                        {
+                            break;
+                        }
+                        toPointClouds(&bufferPacket[k] , i , j, pc);
+                        pc.width++;
+                    } 
+                }
+            }
+        }
+
+        memcpy(&bufferPacket[0] , &bufferPacket[currentPacketEnd] , sizeof(raw_packet_t) * (bufferPacketSize - currentPacketEnd));
+        bufferPacketSize = bufferPacketSize - currentPacketEnd;
+        lastBlockEnd = currentBlockEnd;
+
+        for(int i = 0 ; i < LASER_COUNT ; i++)
+        {
+            if(PandarEnableList[i] == 1)
+            {
+                pc.height++;
+            }
+        }
+
+        pc.width /= pc.height;
+        if(pc.width > 1900 || pc.width < 1700)
+        {
+            ROS_INFO("SSS ");
+        }
+
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+
+
+#if 0
+    raw_packet_t *packets = new raw_packet_t[scanMsg->packets.size()];
+
+    int lastAzumith = -1;
+    int currentPacketEnd = 0;
+    int currentBlockEnd = 0;
+    raw_packet_t *currentPacket = NULL;
+
+    int currentAvariableBlock = 0;
+
+    int foundTheGap = 0;
+    // process each packet provided by the driver
+    for (size_t i = 0; i < scanMsg->packets.size(); ++i)
+    {
+        
+        parseRawData(&packets[i], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
+
+        if(foundTheGap)
+            continue;
+
+        for(size_t j = 0 ; j < BLOCKS_PER_PACKET ; j++)
+        {
+            if(lastAzumith == -1)
+            {
+                lastAzumith = packets[i].blocks[j].azimuth;
+                continue;
+            }
+
+            if(lastAzumith > packets[i].blocks[j].azimuth)
+            {
+                // a frame;
+                if(i != (scanMsg->packets.size() - 1))
+                {
+                    if(j ==  (BLOCKS_PER_PACKET-1))
+                    {
+                        currentPacketEnd = i+1;
+                        currentBlockEnd = 0;
+                    }
+                    else
+                    {
+                        currentPacketEnd = i;
+                        currentBlockEnd = j+1;
+                    }
+
+                    currentPacket = packets;
+                }
+                else
+                {
+                    if(j ==  (BLOCKS_PER_PACKET-1))
+                    {
+                        currentPacket = NULL;
+                        currentPacketEnd = 0;
+                        currentBlockEnd = 0;
+                    }
+                    else
+                    {
+                        currentPacketEnd = i;
+                        currentBlockEnd = j+1;
+                        currentPacket = packets;
+                    }
+                }
+                foundTheGap = 1;
+                break;
+            }
+
+            currentAvariableBlock++;
+        }
+    }
+
+    // ROS_ERROR("dddd  %d %d " , currentPacketEnd , currentBlockEnd);
+#if 1
+    if(lastPacket)
+    {
+        int first = 1;
+        int j = 0;
+
+        for(int i = 0 ; i < LASER_COUNT ; i++)
+        {
+            if(PandarEnableList[i] == 1)
+            {
+                for (int k = lastPacketEnd; k < lastPacketCounter; ++k)
+                {
+                    if(k == lastPacketEnd)
+                        j = lastBlockEnd;
+                    else
+                        j = 0;
+                    
+                    for (; j < BLOCKS_PER_PACKET; ++j)
+                    {
+                        /* code */
+                        toPointClouds(&lastPacket[k] , i , j, pc);
+                        pc.width++;
+                    } 
+                }
+            }
+        }
+    }
+#endif
+
+    // // if(lastPacket && packets[0].blocks[0].azimuth < lastPacket[lastPacketCounter-1].blocks[BLOCKS_PER_PACKET -1].azimuth)
+    // // {
+    // // }
+    // else
+    {
+        for(int i = 0 ; i < LASER_COUNT ; i++)
+        {
+            if(PandarEnableList[i] != 1)
+            {
+                continue;
+            }
+            for (int k = 0; k <= currentPacketEnd; ++k)
+            {
+                for (int j = 0; j < BLOCKS_PER_PACKET; ++j)
+                {
+                    if(k == currentPacketEnd && j == currentBlockEnd)
+                        break;
+                    /* code */
+                    toPointClouds(&packets[k] , i , j, pc);
+                    pc.width++;
+                }
+                
+            }
+        }
+    }
+
+
+#if 1
+
+    for(int i = 0 ; i < LASER_COUNT ; i++)
+    {
+        if(PandarEnableList[i] == 1)
+        {
+            pc.height++;
+        }
+    }
+
+    pc.width /= pc.height;
+    if(pc.width > 1900 || pc.width < 1700)
+    {
+        ROS_ERROR("SSS %d %d  , %d %d " , currentPacketEnd , currentBlockEnd , lastPacketEnd ,lastBlockEnd);
+    }
+
+    if(lastPacket)
+    {
+        delete [] lastPacket;
+        lastPacket = NULL;
+    }
+
+    if(currentPacket)
+    {
+        lastPacket = currentPacket;
+        lastPacketEnd = currentPacketEnd;
+        lastBlockEnd = currentBlockEnd;
+        lastPacketCounter = scanMsg->packets.size();
+    }
+
+#else
+    lastPacket = NULL;
+    delete [] packets;
+#endif
+#endif
 }
 
 /** @brief convert raw packet to point cloud

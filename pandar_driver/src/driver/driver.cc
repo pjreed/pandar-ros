@@ -102,13 +102,14 @@ PandarDriver::PandarDriver(ros::NodeHandle node,
  */
 bool PandarDriver::poll(void)
 {
+  int readpacket = config_.npackets / 3;
   // Allocate a new shared pointer for zero-copy sharing with other nodelets.
   pandar_msgs::PandarScanPtr scan(new pandar_msgs::PandarScan);
-  scan->packets.resize(config_.npackets);
+  scan->packets.resize(readpacket);
 
   // Since the pandar delivers data at a very high rate, keep
   // reading and publishing scans as fast as possible.
-  for (int i = 0; i < config_.npackets; ++i)
+  for (int i = 0; i < readpacket; ++i)
     {
       while (true)
         {
@@ -121,7 +122,7 @@ bool PandarDriver::poll(void)
 
   // publish message using time of last packet read
   ROS_DEBUG("Publishing a full Pandar scan.");
-  scan->header.stamp = scan->packets[config_.npackets - 1].stamp;
+  scan->header.stamp = scan->packets[readpacket - 1].stamp;
   scan->header.frame_id = config_.frame_id;
   output_.publish(scan);
 
