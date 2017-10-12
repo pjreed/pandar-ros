@@ -19,6 +19,7 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <pandar_msgs/PandarScan.h>
+#include <pandar_msgs/PandarGps.h>
 
 #include "driver.h"
 
@@ -94,6 +95,58 @@ PandarDriver::PandarDriver(ros::NodeHandle node,
   // raw packet output topic
   output_ =
     node.advertise<pandar_msgs::PandarScan>("pandar_packets", 10);
+  // raw packet output topic
+  gpsoutput_ =
+    node.advertise<pandar_msgs::PandarGps>("pandar_gps", 1);
+}
+
+#define HS_LIDAR_L40_GPS_PACKET_SIZE (512)
+#define HS_LIDAR_L40_GPS_PACKET_FLAG_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_YEAR_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_MONTH_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_DAY_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_HOUR_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_MINUTE_SIZE (2)
+#define HS_LIDAR_L40_GPS_PACKET_SECOND_SIZE (2)
+#define HS_LIDAR_L40_GPS_ITEM_NUM (7)
+
+//--------------------------------------
+typedef struct HS_LIDAR_L40_GPS_PACKET_s{
+    unsigned short flag;
+    unsigned short year;
+    unsigned short month;
+    unsigned short day;
+    unsigned short second;
+    unsigned short minute;
+    unsigned short hour;
+    unsigned int fineTime;
+//    unsigned char unused[496];
+}HS_LIDAR_L40_GPS_Packet;
+
+//-------------------------------------------------------------------------------
+int HS_L40_GPS_Parse(HS_LIDAR_L40_GPS_Packet *packet , const unsigned char* recvbuf , const int len)
+{
+    if(len != HS_LIDAR_L40_GPS_PACKET_SIZE)
+        return -1;
+
+    int index = 0;
+    packet->flag = (recvbuf[index] & 0xff)|((recvbuf[index + 1] & 0xff)<< 8);
+    index += HS_LIDAR_L40_GPS_PACKET_FLAG_SIZE;
+    packet->year = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10;
+    index += HS_LIDAR_L40_GPS_PACKET_YEAR_SIZE;
+    packet->month = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10;
+    index += HS_LIDAR_L40_GPS_PACKET_MONTH_SIZE;
+    packet->day = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10;
+    index += HS_LIDAR_L40_GPS_PACKET_DAY_SIZE;
+    packet->second = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10;
+    index += HS_LIDAR_L40_GPS_PACKET_SECOND_SIZE;
+    packet->minute = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10;
+    index += HS_LIDAR_L40_GPS_PACKET_MINUTE_SIZE;
+    packet->hour = (recvbuf[index] & 0xff - 0x30) + (recvbuf[index + 1] & 0xff - 0x30) * 10 + 8;
+    index += HS_LIDAR_L40_GPS_PACKET_HOUR_SIZE;
+    packet->fineTime = (recvbuf[index]& 0xff)| (recvbuf[index + 1]& 0xff) << 8 |
+                       ((recvbuf[index + 2 ]& 0xff) << 16) | ((recvbuf[index + 3]& 0xff) << 24);
+    return 0;
 }
 
 /** poll the device
@@ -116,6 +169,26 @@ bool PandarDriver::poll(void)
           // keep reading until full packet received
           int rc = input_->getPacket(&scan->packets[i], config_.time_offset);
           if (rc == 0) break;       // got a full packet?
+          if (rc == 2)
+          {
+            // gps packet;
+            HS_LIDAR_L40_GPS_Packet packet;
+            if(HS_L40_GPS_Parse( &packet , &scan->packets[i].data[0] , HS_LIDAR_L40_GPS_PACKET_SIZE) == 0)
+            {
+              pandar_msgs::PandarGpsPtr gps(new pandar_msgs::PandarGps);
+              gps->stamp = ros::Time::now();
+
+              gps->year = packet.year;
+              gps->month = packet.month;
+              gps->day = packet.day;
+              gps->hour = packet.hour;
+              gps->minute = packet.minute;
+              gps->second = packet.second;
+
+              gpsoutput_.publish(gps);
+            }
+            
+          }
           if (rc < 0) return false; // end of file reached?
         }
     }

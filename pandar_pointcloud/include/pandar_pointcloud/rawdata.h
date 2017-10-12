@@ -31,6 +31,7 @@
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
 #include <pandar_msgs/PandarScan.h>
+#include <pandar_msgs/PandarGps.h>
 #include <pandar_pointcloud/point_types.h>
 #include <pandar_pointcloud/calibration.h>
 

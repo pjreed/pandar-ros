@@ -112,11 +112,14 @@ namespace pandar_driver
     (void) close(sockfd_);
   }
 
+// return : 0 - lidar
+//          2 - gps
+//          1 - error
   /** @brief Get one pandar packet. */
   int InputSocket::getPacket(pandar_msgs::PandarPacket *pkt, const double time_offset)
   {
     double time1 = ros::Time::now().toSec();
-
+    int isgps = 0;
     struct pollfd fds[1];
     fds[0].fd = sockfd_;
     fds[0].events = POLLIN;
@@ -195,6 +198,22 @@ namespace pandar_driver
             else
               break; //done
           }
+          else if ((size_t) nbytes == 512)
+          {
+            // GPS
+            // read successful,
+            // if packet is not from the lidar scanner we selected by IP,
+            // continue otherwise we are done
+            if(devip_str_ != ""
+               && sender_address.sin_addr.s_addr != devip_.s_addr)
+              continue;
+            else
+            {
+              isgps = 1;
+              break; //done
+            }
+          }
+
 
         ROS_DEBUG_STREAM("incomplete Pandar packet read: "
                          << nbytes << " bytes");
@@ -204,7 +223,10 @@ namespace pandar_driver
     // estimate when the scan occurred. Add the time offset.
     double time2 = ros::Time::now().toSec();
     pkt->stamp = ros::Time((time2 + time1) / 2.0 + time_offset);
-
+    if(isgps)
+    {
+      return 2;
+    }
     return 0;
   }
 
@@ -266,6 +288,9 @@ namespace pandar_driver
     pcap_close(pcap_);
   }
 
+// return : 0 - lidar
+//          2 - gps
+//          1 - error
   /** @brief Get one pandar packet. */
   int InputPCAP::getPacket(pandar_msgs::PandarPacket *pkt, const double time_offset)
   {
@@ -291,6 +316,11 @@ namespace pandar_driver
             memcpy(&pkt->data[0], pkt_data+42, packet_size);
             pkt->stamp = ros::Time::now(); // time_offset not considered here, as no synchronization required
             empty_ = false;
+
+            if(header->caplen <= ( 512 + 42) )
+            {
+              return 2;
+            }
             return 0;                   // success
           }
 

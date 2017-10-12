@@ -25,6 +25,7 @@
 #include <pandar_driver/input.h>
 #include <pandar_driver/PandarNodeConfig.h>
 
+
 namespace pandar_driver
 {
 
@@ -60,6 +61,7 @@ private:
 
   boost::shared_ptr<Input> input_;
   ros::Publisher output_;
+  ros::Publisher gpsoutput_;
 
   /** diagnostics updater */
   diagnostic_updater::Updater diagnostics_;

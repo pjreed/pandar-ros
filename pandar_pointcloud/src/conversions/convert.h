@@ -40,6 +40,7 @@ private:
     void callback(pandar_pointcloud::CloudNodeConfig &config,
                   uint32_t level);
     void processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg);
+    void processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg);
 
     ///Pointer to dynamic reconfigure service srv_
     boost::shared_ptr<dynamic_reconfigure::Server<pandar_pointcloud::
@@ -47,6 +48,7 @@ private:
 
     boost::shared_ptr<pandar_rawdata::RawData> data_;
     ros::Subscriber pandar_scan_;
+    ros::Subscriber pandar_gps_;
     ros::Publisher output_;
 
     /// configuration parameters

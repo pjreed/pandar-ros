@@ -41,6 +41,10 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh):
         node.subscribe("pandar_packets", 100,
                        &Convert::processScan, (Convert *) this,
                        ros::TransportHints().tcpNoDelay(true));
+    pandar_gps_ =
+        node.subscribe("pandar_gps", 1,
+                       &Convert::processGps, (Convert *) this,
+                       ros::TransportHints().tcpNoDelay(true));
 }
 
 void Convert::callback(pandar_pointcloud::CloudNodeConfig &config,
@@ -81,6 +85,13 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
 
     if(ret == 1)
         output_.publish(outMsg);
+}
+
+void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
+{
+    if (output_.getNumSubscribers() == 0)         // no one listening?
+        return;                                     // avoid much work
+    ROS_ERROR("year : %d \n" , gpsMsg->second);
 }
 
 } // namespace pandar_pointcloud
