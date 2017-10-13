@@ -15,7 +15,7 @@
     <param name="min_range" value="$(arg min_range)"/>
   </node>
 
-  <node pkg="nodelet" type="nodelet" name="$(arg manager)_color"
+  <!--node pkg="nodelet" type="nodelet" name="$(arg manager)_color"
         args="load pandar_pointcloud/RingColorsNodelet $(arg manager)"
-		output="screen"/>
+		output="screen"/-->
 </launch>

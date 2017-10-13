@@ -185,6 +185,8 @@ bool PandarDriver::poll(void)
               gps->minute = packet.minute;
               gps->second = packet.second;
 
+              gps->used = 0;
+
               gpsoutput_.publish(gps);
             }
             

@@ -70,28 +70,41 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     outMsg->header.frame_id = scanMsg->header.frame_id;
     outMsg->height = 1;
 
-
-
     // process each packet provided by the driver
     // for (size_t i = 0; i < scanMsg->packets.size(); ++i)
     // {
     //     data_->unpack(scanMsg->packets[i], *outMsg);
     // }
-    int ret = data_->unpack(scanMsg, *outMsg);
+    double firstStamp = 0.0f;
+    int ret = data_->unpack(scanMsg, *outMsg , gps1 , gps2 , firstStamp);
 
     // publish the accumulated cloud message
 	ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
 					 << " Pandar40 points, time: " << outMsg->header.stamp);
 
     if(ret == 1)
+    {
+        outMsg->header.stamp = firstStamp;
         output_.publish(outMsg);
+    }
 }
 
 void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
 {
     if (output_.getNumSubscribers() == 0)         // no one listening?
         return;                                     // avoid much work
-    ROS_ERROR("year : %d \n" , gpsMsg->second);
+    
+    // ROS_ERROR("second : %d %d " , gpsMsg->second , gps2.gps);
+    struct tm t;
+    t.tm_sec = gpsMsg->second;
+    t.tm_min = gpsMsg->minute;
+    t.tm_hour = gpsMsg->hour;
+    t.tm_mday = gpsMsg->day;
+    t.tm_mon = gpsMsg->month - 1;
+    t.tm_year = gpsMsg->year + 2000 - 1900;
+    t.tm_isdst = 0;  
+    gps2.gps = mktime(&t);
+    gps2.used = 0;
 }
 
 } // namespace pandar_pointcloud

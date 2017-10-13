@@ -1,4 +1,5 @@
 time stamp
+uint32 used
 uint16 year
 uint16 month
 uint16 day

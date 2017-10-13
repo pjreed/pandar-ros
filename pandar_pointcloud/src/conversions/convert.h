@@ -56,6 +56,9 @@ private:
         int npackets;                    ///< number of packets to combine
     } Config;
     Config config_;
+
+    time_t gps1;
+    pandar_rawdata::gps_struct_t gps2;
 };
 
 } // namespace pandar_pointcloud

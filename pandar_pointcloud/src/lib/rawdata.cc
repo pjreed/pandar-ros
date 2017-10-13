@@ -37,6 +37,10 @@
 
 namespace pandar_rawdata
 {
+
+static double block_offset[BLOCKS_PER_PACKET];
+static double laser_offset[LASER_COUNT];
+
 ////////////////////////////////////////////////////////////////////////
 //
 // RawData base class implementation
@@ -48,6 +52,57 @@ RawData::RawData()
     bufferPacket = new raw_packet_t[1000];
     bufferPacketSize = 0;
     lastBlockEnd = 0;
+    lastTimestamp = 0;
+
+    block_offset[5] = 55.1f * 0.0 + 45.18f;
+    block_offset[4] = 55.1f * 1.0 + 45.18f;
+    block_offset[3] = 55.1f * 2.0 + 45.18f;
+    block_offset[2] = 55.1f * 3.0 + 45.18f;
+    block_offset[1] = 55.1f * 4.0 + 45.18f;
+    block_offset[0] = 55.1f * 5.0 + 45.18f;
+
+    laser_offset[3] = 0.93f * 1.0f;
+    laser_offset[35] = 0.93f * 2.0f;
+    laser_offset[39] = 0.93f * 3.0f;
+    laser_offset[23] = 0.93f * 3.0f + 1.6f * 1.0f;
+    laser_offset[16] = 0.93f * 3.0f + 1.6f * 2.0f;
+    laser_offset[27] = 0.93f * 4.0f + 1.6f * 2.0f;
+    laser_offset[11] = 0.93f * 4.0f + 1.6f * 3.0f;
+    laser_offset[31] = 0.93f * 5.0f + 1.6f * 3.0f;
+    laser_offset[28] = 0.93f * 6.0f + 1.6f * 3.0f;
+    laser_offset[15] = 0.93f * 6.0f + 1.6f * 4.0f;
+    laser_offset[2] = 0.93f * 7.0f + 1.6f * 4.0f;
+    laser_offset[34] = 0.93f * 8.0f + 1.6f * 4.0f;
+    laser_offset[38] = 0.93f * 9.0f + 1.6f * 4.0f;
+    laser_offset[20] = 0.93f * 9.0f + 1.6f * 5.0f;
+    laser_offset[13] = 0.93f * 9.0f + 1.6f * 6.0f;
+    laser_offset[24] = 0.93f * 9.0f + 1.6f * 7.0f;
+    laser_offset[8] = 0.93f * 9.0f + 1.6f * 8.0f;
+    laser_offset[30] = 0.93f * 10.0f + 1.6f * 8.0f;
+    laser_offset[25] = 0.93f * 11.0f + 1.6f * 8.0f;
+    laser_offset[12] = 0.93f * 11.0f + 1.6f * 9.0f;
+    laser_offset[1] = 0.93f * 12.0f + 1.6f * 9.0f;
+    laser_offset[33] = 0.93f * 13.0f + 1.6f * 9.0f;
+    laser_offset[37] = 0.93f * 14.0f + 1.6f * 9.0f;
+    laser_offset[17] = 0.93f * 14.0f + 1.6f * 10.0f;
+    laser_offset[10] = 0.93f * 14.0f + 1.6f * 11.0f;
+    laser_offset[21] = 0.93f * 14.0f + 1.6f * 12.0f;
+    laser_offset[5] = 0.93f * 14.0f + 1.6f * 13.0f;
+    laser_offset[29] = 0.93f * 15.0f + 1.6f * 13.0f;
+    laser_offset[22] = 0.93f * 15.0f + 1.6f * 14.0f;
+    laser_offset[9] = 0.93f * 15.0f + 1.6f * 15.0f;
+    laser_offset[0] = 0.93f * 16.0f + 1.6f * 15.0f;
+    laser_offset[32] = 0.93f * 17.0f + 1.6f * 15.0f;
+    laser_offset[36] = 0.93f * 18.0f + 1.6f * 15.0f;
+    laser_offset[14] = 0.93f * 18.0f + 1.6f * 16.0f;
+    laser_offset[7] = 0.93f * 18.0f + 1.6f * 17.0f;
+    laser_offset[18] = 0.93f * 18.0f + 1.6f * 18.0f;
+    laser_offset[4] = 0.93f * 19.0f + 1.6f * 18.0f;
+    laser_offset[26] = 0.93f * 20.0f + 1.6f * 18.0f;
+    laser_offset[19] = 0.93f * 20.0f + 1.6f * 19.0f;
+    laser_offset[6] = 0.93f * 20.0f + 1.6f * 20.0f;
+    
+
 }
 
 /** Update parameters: conversions and update */
@@ -289,7 +344,7 @@ void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
             {
                 continue;
             }
-			xyzir.ring = j;
+			// xyzir.ring = j;
 			pc.points.push_back(xyzir);
 			pc.width++;
         }
@@ -318,19 +373,30 @@ void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 //     }
 // }
 
-void RawData::toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc)
+void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc , double stamp , double& firstStamp)
 {
-    for (int i = 0; i < BLOCKS_PER_PACKET; i++) {
-        const raw_block_t& firing_data = packet->blocks[i];
+    int first = 0;
+    const raw_block_t& firing_data = packet->blocks[block];
+    for (int i = 0; i < LASER_COUNT; i++) {
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
-                    firing_data.measures[laser], calibration_.laser_corrections[laser]);
+                    firing_data.measures[i], calibration_.laser_corrections[i]);
             if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
             {
                 continue;
             }
-            xyzir.ring = laser;
+
+            xyzir.timestamp = stamp - ((block_offset[block] + laser_offset[i])/1000000);
+            if(!first)
+            {
+                firstStamp = xyzir.timestamp;
+                first = 1;
+            }
+            // ROS_ERROR("point stamp : %lf " , xyzir.timestamp);
+
+            // xyzir.ring = i;
             pc.points.push_back(xyzir);
+            pc.width++;
     }
 }
 
@@ -346,13 +412,14 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
             {
                 return;
             }
-            xyzir.ring = laser;
+            // xyzir.ring = laser;
             pc.points.push_back(xyzir);
             pc.width++;
     }
 }
 
-int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc)
+int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc , time_t& gps1 , 
+    gps_struct_t &gps2 , double& firstStamp)
 {
     currentPacketStart = bufferPacketSize == 0 ? 0 :bufferPacketSize -1 ;
     for (int i = 0; i < scanMsg->packets.size(); ++i)
@@ -408,6 +475,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
 
     if(hasAframe)
     {
+#if 0
         for(int i = 0 ; i < LASER_COUNT ; i++)
         {
             if(PandarEnableList[i] == 1)
@@ -433,7 +501,57 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                 }
             }
         }
+#else
+        int first = 0;
+        int j = 0;
+        for (int k = 0; k < (currentPacketEnd + 1); ++k)
+        {
+            if(k == 0)
+                j = lastBlockEnd;
+            else
+                j = 0;
 
+            
+
+            // if > 500ms 
+            if(bufferPacket[k].timestamp < 500000 && gps2.used == 0)
+            {
+                gps1 = gps2.gps;
+                gps2.used =1;
+            }
+            else
+            {
+                if(bufferPacket[k].timestamp < lastTimestamp)
+                {
+                    // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
+                    // We need to add the offset.
+                    ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!!");
+                    gps1 += /*(lastTimestamp /1000000) + */ 1;
+                }
+            }
+            int timestamp = bufferPacket[k].timestamp;
+
+            // ROS_ERROR("timestamp : %d %lf %d"  , timestamp ,ros::Time::now().toSec() , gps1);
+            // ROS_ERROR("timestamp of this packet : %lf" ,(double)gps1 + (((double)bufferPacket[k].timestamp)/1000000));
+            for (; j < BLOCKS_PER_PACKET; ++j)
+            {
+                /* code */
+                if (currentBlockEnd == j && k == (currentPacketEnd))
+                {
+                    break;
+                }
+                double stamp = 0.0;
+                toPointClouds(&bufferPacket[k] , j, pc ,(double)gps1 + (((double)bufferPacket[k].timestamp)/1000000) , stamp);
+                if(!first && stamp != 0.0)
+                {
+                    firstStamp = stamp;
+                    first = 1;
+                }
+                
+            } 
+            lastTimestamp = bufferPacket[k].timestamp;
+        }
+#endif
         memcpy(&bufferPacket[0] , &bufferPacket[currentPacketEnd] , sizeof(raw_packet_t) * (bufferPacketSize - currentPacketEnd));
         bufferPacketSize = bufferPacketSize - currentPacketEnd;
         lastBlockEnd = currentBlockEnd;

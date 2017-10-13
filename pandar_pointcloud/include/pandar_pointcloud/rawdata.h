@@ -38,7 +38,7 @@
 namespace pandar_rawdata
 {
 // Shorthand typedefs for point cloud representations
-typedef pandar_pointcloud::PointXYZIR PPoint;
+typedef pandar_pointcloud::PointXYZIT PPoint;
 typedef pcl::PointCloud<PPoint> PPointCloud;
 
 static const int SOB_ANGLE_SIZE = 4;
@@ -82,6 +82,11 @@ typedef struct raw_packet
     uint8_t factory[2];
 } raw_packet_t;
 
+typedef struct gps_struct{
+    int used;
+    time_t gps;
+}gps_struct_t;
+
 /** \brief Pandar40 data conversion class */
 class RawData
 {
@@ -117,7 +122,8 @@ public:
     int setupOffline(std::string calibration_file, double max_range_, double min_range_);
 
     void unpack(const pandar_msgs::PandarPacket &pkt, PPointCloud &pc);
-    int unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc);
+    int unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc, time_t& gps1 , 
+                                            gps_struct_t &gps2 , double& firstStamp);
 
     void setParameters(double min_range, double max_range, double view_direction,
                        double view_width);
@@ -153,7 +159,7 @@ private:
 
 	int parseRawData(raw_packet* packet, const uint8_t* buf, const int len);
 	void toPointClouds (raw_packet* packet, PPointCloud& pc);
-    void toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc);
+    void toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc , double stamp , double& firstStamp);
     void toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc);
 	void computeXYZIR(PPoint& point, int azimuth,
 			const raw_measure_t& laserReturn,
@@ -165,6 +171,8 @@ private:
     int bufferPacketSize;
 
     int currentPacketStart;
+
+    unsigned int lastTimestamp;
 };
 
 } // namespace pandar_rawdata
