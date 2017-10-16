@@ -84,7 +84,7 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
 
     if(ret == 1)
     {
-        outMsg->header.stamp = firstStamp;
+        pcl_conversions::toPCL(ros::Time(firstStamp), outMsg->header.stamp);
         output_.publish(outMsg);
     }
 }
