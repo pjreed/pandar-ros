@@ -66,7 +66,7 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     // outMsg's header is a pcl::PCLHeader, convert it before stamp assignment
     outMsg->header.stamp = pcl_conversions::toPCL(scanMsg->header).stamp;
     // pcl_conversions::toPCL(ros::Time::now(), outMsg->header.stamp);
-    // outMsg->is_dense = false;
+    outMsg->is_dense = false;
     outMsg->header.frame_id = scanMsg->header.frame_id;
     outMsg->height = 1;
 
@@ -78,13 +78,16 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     double firstStamp = 0.0f;
     int ret = data_->unpack(scanMsg, *outMsg , gps1 , gps2 , firstStamp);
 
+
+
     // publish the accumulated cloud message
 	ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
 					 << " Pandar40 points, time: " << outMsg->header.stamp);
 
     if(ret == 1)
     {
-        outMsg->header.stamp = firstStamp;
+        ROS_ERROR("stamp : %lf " , firstStamp);
+        pcl_conversions::toPCL(ros::Time(firstStamp), outMsg->header.stamp);
         output_.publish(outMsg);
     }
 }

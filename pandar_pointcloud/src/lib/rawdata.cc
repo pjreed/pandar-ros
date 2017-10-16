@@ -276,9 +276,9 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     point.y = static_cast<float> (xyDistance * cos_azimuth + correction.horizontalOffsetCorrection * sin_azimuth);
     point.z = static_cast<float> (distanceM * correction.sinVertCorrection + correction.verticalOffsetCorrection);
 
-    // float a = point.x;
-    // point.x = - point.y;
-    // point.y = a;
+    float a = point.x;
+    point.x = - point.y;
+    point.y = a;
 
     if (point.x == 0 && point.y == 0 && point.z == 0)
     {
@@ -286,48 +286,50 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
     }
 }
 
+
 static int PandarEnableList[LASER_COUNT] = {
-	1,
-	1,
-	1,
+    0,
     1,
-	1,
+    0,
     1,
-	1,
+    0,
     1,
-	1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
+    0,
     1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
+    0,
     1,
 };
+
 
 void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
 {
@@ -400,6 +402,24 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
     }
 }
 
+// void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc)
+// {
+//     int i = block;
+//     {
+//         const raw_block_t& firing_data = packet->blocks[i];
+//             PPoint xyzir;
+//             computeXYZIR (xyzir, firing_data.azimuth,
+//                     firing_data.measures[laser], calibration_.laser_corrections[laser]);
+//             if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+//             {
+//                 return;
+//             }
+//             // xyzir.ring = laser;
+//             pc.points.push_back(xyzir);
+//             pc.width++;
+//     }
+// }
+
 void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc)
 {
     int i = block;
@@ -408,10 +428,10 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
                     firing_data.measures[laser], calibration_.laser_corrections[laser]);
-            if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
-            {
-                return;
-            }
+            // if (pcl_isnan (xyzir.x) || pcl_isnan (xyzir.y) || pcl_isnan (xyzir.z))
+            // {
+            //     return;
+            // }
             // xyzir.ring = laser;
             pc.points.push_back(xyzir);
             pc.width++;
@@ -473,9 +493,11 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         }
     }
 
+    int first = 1;
+
     if(hasAframe)
     {
-#if 0
+#if 1
         for(int i = 0 ; i < LASER_COUNT ; i++)
         {
             if(PandarEnableList[i] == 1)
@@ -498,9 +520,37 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                         toPointClouds(&bufferPacket[k] , i , j, pc);
                         
                     } 
+
+                    if(first)
+                    {
+                        // if > 500ms 
+                        if(bufferPacket[k].timestamp < 500000 && gps2.used == 0)
+                        {
+                            gps1 = gps2.gps;
+                            gps2.used =1;
+                        }
+                        else
+                        {
+                            if(bufferPacket[k].timestamp < lastTimestamp)
+                            {
+                                // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
+                                // We need to add the offset.
+                                // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!!");
+                                gps1 += /*(lastTimestamp /1000000) + */ 1;
+                            }
+                        }
+                        if(firstStamp == 0.0f)
+                        {
+                            firstStamp = (double)gps1 + (((double)bufferPacket[k].timestamp)/1000000) - ((block_offset[j] + laser_offset[i])/1000000);
+                        }
+                        lastTimestamp = bufferPacket[k].timestamp;
+                    }
                 }
+                first = 0;
             }
         }
+
+
 #else
         int first = 0;
         int j = 0;
@@ -556,19 +606,20 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         bufferPacketSize = bufferPacketSize - currentPacketEnd;
         lastBlockEnd = currentBlockEnd;
 
-        // for(int i = 0 ; i < LASER_COUNT ; i++)
-        // {
-        //     if(PandarEnableList[i] == 1)
-        //     {
-        //         pc.height++;
-        //     }
-        // }
+        pc.height = 0;
+        for(int i = 0 ; i < LASER_COUNT ; i++)
+        {
+            if(PandarEnableList[i] == 1)
+            {
+                pc.height++;
+            }
+        }
 
-        // pc.width /= pc.height;
-        // if(pc.width > 1900 || pc.width < 1700)
-        // {
-        //     ROS_INFO("This fram ");
-        // }
+        pc.width /= pc.height;
+        if(pc.width > 1900 || pc.width < 1700)
+        {
+            ROS_INFO("This fram ");
+        }
 
         return 1;
     }
@@ -632,7 +683,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                         currentPacketEnd = 0;
                         currentBlockEnd = 0;
                     }
-                    else
+                    else    
                     {
                         currentPacketEnd = i;
                         currentBlockEnd = j+1;
