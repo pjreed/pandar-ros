@@ -389,6 +389,7 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
             xyzir.timestamp = stamp - ((block_offset[block] + laser_offset[i])/1000000);
             if(!first)
             {
+                // ROS_ERROR("%f" , xyzir.timestamp);
                 firstStamp = xyzir.timestamp;
                 first = 1;
             }
@@ -516,6 +517,10 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
             // if > 500ms 
             if(bufferPacket[k].timestamp < 500000 && gps2.used == 0)
             {
+                if(gps1 > gps2.gps)
+                {
+                    ROS_ERROR("Oops , You give me a wrong timestamp I think...");
+                }
                 gps1 = gps2.gps;
                 gps2.used =1;
             }
@@ -525,8 +530,9 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                 {
                     // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
                     // We need to add the offset.
-                    // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!!");
-                    gps1 += /*(lastTimestamp /1000000) + */ 1;
+                    
+                    gps1 += (lastTimestamp /1000000) +  1;
+                    // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d " , gps1);
                 }
             }
             int timestamp = bufferPacket[k].timestamp;

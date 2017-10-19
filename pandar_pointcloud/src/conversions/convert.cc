@@ -94,7 +94,7 @@ void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
     if (output_.getNumSubscribers() == 0)         // no one listening?
         return;                                     // avoid much work
     
-    // ROS_ERROR("second : %d %d " , gpsMsg->second , gps2.gps);
+    
     struct tm t;
     t.tm_sec = gpsMsg->second;
     t.tm_min = gpsMsg->minute;
@@ -105,6 +105,8 @@ void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
     t.tm_isdst = 0;  
     gps2.gps = mktime(&t) + 1; // the gps always is the last gps, the newest GPS data is after the PPS(Serial port transmition speed...)
     gps2.used = 0;
+
+    // ROS_ERROR("Got data second : %f " ,(double)gps2.gps);
 }
 
 } // namespace pandar_pointcloud
