@@ -536,7 +536,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                                 // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
                                 // We need to add the offset.
                                 // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!!");
-                                gps1 += /*(lastTimestamp /1000000) + */ 1;
+                                gps1 += ((lastTimestamp - 100) /1000000) +  1;
                             }
                         }
                         if(firstStamp == 0.0f)
