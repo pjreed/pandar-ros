@@ -317,11 +317,19 @@ namespace pandar_driver
             pkt->stamp = ros::Time::now(); // time_offset not considered here, as no synchronization required
             empty_ = false;
 
-            if(header->caplen <= ( 512 + 42) )
+            if(header->caplen == ( 512 + 42) )
             {
+              // ROS_ERROR("GPS");
               return 2;
             }
-            return 0;                   // success
+
+            else if (header->caplen == ( 1240 + 42) )
+            {
+              return 0;                   // success
+            }
+
+            // Wrong data , It's not the packet of LiDAR I think.
+            continue;
           }
 
         if (empty_)                 // no data in file?

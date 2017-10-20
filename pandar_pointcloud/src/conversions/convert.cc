@@ -103,9 +103,12 @@ void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
     t.tm_mon = gpsMsg->month - 1;
     t.tm_year = gpsMsg->year + 2000 - 1900;
     t.tm_isdst = 0;  
-    gps2.gps = mktime(&t) + 1; // the gps always is the last gps, the newest GPS data is after the PPS(Serial port transmition speed...)
-    gps2.used = 0;
-
+    if(lastGPSSecond != (mktime(&t) + 1))
+    {
+        lastGPSSecond = (mktime(&t) + 1);
+        gps2.gps = mktime(&t) + 1; // the gps always is the last gps, the newest GPS data is after the PPS(Serial port transmition speed...)
+        gps2.used = 0;
+    }
     // ROS_ERROR("Got data second : %f " ,(double)gps2.gps);
 }
 
