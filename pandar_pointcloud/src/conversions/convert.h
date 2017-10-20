@@ -59,6 +59,8 @@ private:
 
     time_t gps1;
     pandar_rawdata::gps_struct_t gps2;
+
+    unsigned int  lastGPSSecond;
 };
 
 } // namespace pandar_pointcloud
