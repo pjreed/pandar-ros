@@ -394,8 +394,6 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
                 firstStamp = xyzir.timestamp;
                 first = 1;
             }
-            // ROS_ERROR("point stamp : %lf " , xyzir.timestamp);
-
             // xyzir.ring = i;
             pc.points.push_back(xyzir);
             pc.width++;
@@ -420,7 +418,7 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
 //     }
 // }
 
-void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc)
+void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc , double blockstamp)
 {
     int i = block;
     {
@@ -433,6 +431,7 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
             //     return;
             // }
             // xyzir.ring = laser;
+            xyzir.timestamp = blockstamp - ((block_offset[block] + laser_offset[laser])/1000000);
             pc.points.push_back(xyzir);
             pc.width++;
     }
@@ -494,7 +493,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
     }
 
     int first = 1;
-
+    std::vector<double> blockTimestamp;
     if(hasAframe)
     {
 #if 1
@@ -505,22 +504,6 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                 int j = 0;
                 for (int k = 0; k < (currentPacketEnd + 1); ++k)
                 {
-                    if(k == 0)
-                        j = lastBlockEnd;
-                    else
-                        j = 0;
-                    
-                    for (; j < BLOCKS_PER_PACKET; ++j)
-                    {
-                        /* code */
-                        if (currentBlockEnd == j && k == (currentPacketEnd))
-                        {
-                            break;
-                        }
-                        toPointClouds(&bufferPacket[k] , i , j, pc);
-                        
-                    } 
-
                     if(first)
                     {
                         // if > 500ms 
@@ -544,7 +527,27 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                             firstStamp = (double)gps1 + (((double)bufferPacket[k].timestamp)/1000000) - ((block_offset[j] + laser_offset[i])/1000000);
                         }
                         lastTimestamp = bufferPacket[k].timestamp;
+
+                        // build the block stamps
+                        blockTimestamp.push_back((double)gps1 + (((double)bufferPacket[k].timestamp)/1000000));
                     }
+
+                    if(k == 0)
+                        j = lastBlockEnd;
+                    else
+                        j = 0;
+                    
+                    for (; j < BLOCKS_PER_PACKET; ++j)
+                    {
+                        /* code */
+                        if (currentBlockEnd == j && k == (currentPacketEnd))
+                        {
+                            break;
+                        }
+                        toPointClouds(&bufferPacket[k] , i , j, pc,blockTimestamp[k]);
+
+                    }
+                    
                 }
                 first = 0;
             }

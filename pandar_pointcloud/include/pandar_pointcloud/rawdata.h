@@ -160,7 +160,7 @@ private:
 	int parseRawData(raw_packet* packet, const uint8_t* buf, const int len);
 	void toPointClouds (raw_packet* packet, PPointCloud& pc);
     void toPointClouds (raw_packet_t* packet,int laser ,  PPointCloud& pc , double stamp , double& firstStamp);
-    void toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc);
+    void toPointClouds (raw_packet_t* packet,int laser , int block,  PPointCloud& pc , double blockstamp);
 	void computeXYZIR(PPoint& point, int azimuth,
 			const raw_measure_t& laserReturn,
 			const pandar_pointcloud::PandarLaserCorrection& correction);
