@@ -378,6 +378,16 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
     int first = 0;
     const raw_block_t& firing_data = packet->blocks[block];
     for (int i = 0; i < LASER_COUNT; i++) {
+        // if(i == 0)
+        // {
+        //     double cur_time = stamp - ((double)(block_offset[block] + laser_offset[i])/1000000.0f);
+        //     // double cur_time = stamp - ((block_offset[block] + laser_offset[i])/1000000);
+        //     double diff = packet->recv_time - cur_time;
+        //     if(diff < 0.0f)
+        //     {
+        //         ROS_ERROR("ERROR TIME %lf %lf %f " , cur_time , packet->recv_time , diff);
+        //     }
+        // }
             PPoint xyzir;
             computeXYZIR (xyzir, firing_data.azimuth,
                     firing_data.measures[i], calibration_.laser_corrections[i]);
@@ -386,7 +396,7 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
                 continue;
             }
 
-            xyzir.timestamp = stamp - ((block_offset[block] + laser_offset[i])/1000000);
+            xyzir.timestamp = stamp - ((double)(block_offset[block] + laser_offset[i])/1000000.0f);
             if(!first)
             {
                 // ROS_ERROR("%f" , xyzir.timestamp);
@@ -427,6 +437,7 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
     {
         /* code */
         parseRawData(&bufferPacket[bufferPacketSize++], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
+        bufferPacket[bufferPacketSize - 1].recv_time = scanMsg->packets[i].stamp.toSec();
     }
     
     // ROS_ERROR("currentPacketStart %d bufferPacketSize %d " , currentPacketStart , bufferPacketSize);
@@ -528,11 +539,17 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
             {
                 if(bufferPacket[k].timestamp < lastTimestamp)
                 {
-                    // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
-                    // We need to add the offset.
+                    int gap = (int)lastTimestamp - (int)bufferPacket[k].timestamp;
+                    // avoid the fake jump... wrong udp order
+                    if(gap > (10 * 1000)) // 10ms
+                    {
+                        // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
+                        // We need to add the offset.
+                        
+                        gps1 += ((lastTimestamp-20) /1000000) +  1; // 20us offset , avoid the timestamp of 1000002...
+                        // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d " , gps1);
+                    }
                     
-                    gps1 += ((lastTimestamp-20) /1000000) +  1; // 20us offset , avoid the timestamp of 1000002...
-                    // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d " , gps1);
                 }
             }
             int timestamp = bufferPacket[k].timestamp;

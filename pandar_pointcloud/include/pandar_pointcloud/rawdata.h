@@ -80,6 +80,7 @@ typedef struct raw_packet
     uint16_t revolution;
     uint32_t timestamp;
     uint8_t factory[2];
+    double recv_time;
 } raw_packet_t;
 
 typedef struct gps_struct{
