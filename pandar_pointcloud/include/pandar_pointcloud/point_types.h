@@ -39,6 +39,7 @@ struct PointXYZIT {
     PCL_ADD_POINT4D
     uint8_t intensity;
     double timestamp;
+    uint16_t ring;                      ///< laser ring number
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW // make sure our new allocators are aligned
 } EIGEN_ALIGN16;
 // enforce SSE padding for correct memory alignment
@@ -82,7 +83,7 @@ POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_pointcloud::PointXYZIR,
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_pointcloud::PointXYZIT,
                                   (float, x, x)(float, y, y)(float, z, z)
-                                  (uint8_t, intensity, intensity)(double, timestamp, timestamp))
+                                  (uint8_t, intensity, intensity)(double, timestamp, timestamp)(uint16_t, ring, ring))
 
 POINT_CLOUD_REGISTER_POINT_STRUCT(pandar_pointcloud::PointXYZITd,
                                   (double, x, x)(double, y, y)(double, z, z)(uint8_t, intensity, intensity)(double, timestamp,

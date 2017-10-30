@@ -173,7 +173,9 @@ private:
 
     int currentPacketStart;
 
-    unsigned int lastTimestamp;
+    int lastTimestamp;
+
+    int lastAzumith;
 };
 
 } // namespace pandar_rawdata

@@ -403,9 +403,9 @@ void RawData::toPointClouds (raw_packet_t* packet,int block ,  PPointCloud& pc ,
                 firstStamp = xyzir.timestamp;
                 first = 1;
             }
-            // ROS_ERROR("point stamp : %lf " , xyzir.timestamp);
+            
 
-            // xyzir.ring = i;
+            xyzir.ring = i;
             pc.points.push_back(xyzir);
             pc.width++;
     }
@@ -438,6 +438,14 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
         /* code */
         parseRawData(&bufferPacket[bufferPacketSize++], &scanMsg->packets[i].data[0], scanMsg->packets[i].data.size());
         bufferPacket[bufferPacketSize - 1].recv_time = scanMsg->packets[i].stamp.toSec();
+
+        // int agap = (int)bufferPacket[bufferPacketSize - 1].blocks[0].azimuth - lastAzumith;
+        // agap = agap < 0 ? agap + 36000 : agap;
+        // if(agap > 130)
+        // {
+        //     ROS_ERROR("azimuth gap is too large %d-%d=%d" , bufferPacket[bufferPacketSize - 1].blocks[0].azimuth , lastAzumith,agap);
+        // }
+        // lastAzumith = bufferPacket[bufferPacketSize - 1].blocks[0].azimuth;
     }
     
     // ROS_ERROR("currentPacketStart %d bufferPacketSize %d " , currentPacketStart , bufferPacketSize);
@@ -547,13 +555,20 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
                         // We need to add the offset.
                         
                         gps1 += ((lastTimestamp-20) /1000000) +  1; // 20us offset , avoid the timestamp of 1000002...
-                        // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d " , gps1);
+                        // ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d %d %d " , gps1 , lastTimestamp , bufferPacket[k].timestamp);
                     }
                     
                 }
             }
             int timestamp = bufferPacket[k].timestamp;
 
+
+            // int gap = timestamp - lastTimestamp;
+            // gap = gap <0 ? gap + 1000000 : gap;
+            // if(gap > 600)
+            // {
+            //     ROS_ERROR("gap too large %d-%d=%d"  , timestamp ,lastTimestamp , gap);
+            // }
             // ROS_ERROR("timestamp : %d %lf %d"  , timestamp ,ros::Time::now().toSec() , gps1);
             // ROS_ERROR("timestamp of this packe t : %lf" ,(double)gps1 + (((double)bufferPacket[k].timestamp)/1000000));
             for (; j < BLOCKS_PER_PACKET; ++j)
