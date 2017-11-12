@@ -430,7 +430,7 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
 }
 
 int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc , time_t& gps1 , 
-    gps_struct_t &gps2 , double& firstStamp)
+    gps_struct_t &gps2 , double& firstStamp, int& lidarRotationStartAngle)
 {
     currentPacketStart = bufferPacketSize == 0 ? 0 :bufferPacketSize -1 ;
     for (int i = 0; i < scanMsg->packets.size(); ++i)
@@ -484,11 +484,25 @@ int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointClou
 
                 if(lastAzumith > bufferPacket[i].blocks[j].azimuth)
                 {
+                    if (lidarRotationStartAngle <= bufferPacket[i].blocks[j].azimuth)
+                    {
+                        // ROS_ERROR("rotation, %d, %d, %d", lastAzumith, bufferPacket[i].blocks[j].azimuth, lidarRotationStartAngle);
+                        currentBlockEnd = j;
+                        hasAframe = 1;
+                        currentPacketEnd = i;
+                        break;
+                    }
+
+                }
+                else if (lastAzumith < lidarRotationStartAngle && lidarRotationStartAngle <= bufferPacket[i].blocks[j].azimuth)
+                {
+                    // ROS_ERROR("%d, %d, %d", lastAzumith, bufferPacket[i].blocks[j].azimuth, lidarRotationStartAngle);
                     currentBlockEnd = j;
                     hasAframe = 1;
                     currentPacketEnd = i;
                     break;
                 }
+                lastAzumith = bufferPacket[i].blocks[j].azimuth;
             }
         }
     }

@@ -61,6 +61,7 @@ private:
     pandar_rawdata::gps_struct_t gps2;
 
     unsigned int lastGPSSecond;
+    int lidarRotationStartAngle;
 };
 
 } // namespace pandar_pointcloud
