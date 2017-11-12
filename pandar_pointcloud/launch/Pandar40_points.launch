@@ -16,6 +16,7 @@
   <arg name="read_once" default="false" />
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
+  <arg name="start_angle" default="0.0" />
 
   <!-- start nodelet manager and driver nodelets -->
   <include file="$(find pandar_driver)/launch/nodelet_manager.launch">
@@ -28,6 +29,7 @@
     <arg name="read_once" value="$(arg read_once)"/>
     <arg name="repeat_delay" value="$(arg repeat_delay)"/>
     <arg name="rpm" value="$(arg rpm)"/>
+
   </include>
 
   <!-- start cloud nodelet -->
@@ -36,6 +38,7 @@
     <arg name="manager" value="$(arg manager)" />
     <arg name="max_range" value="$(arg max_range)"/>
     <arg name="min_range" value="$(arg min_range)"/>
+    <arg name="start_angle" value="$(arg start_angle)"/>
   </include>
   <!--
   -->

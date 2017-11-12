@@ -35,7 +35,9 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh):
     CallbackType f;
     f = boost::bind (&Convert::callback, this, _1, _2);
     srv_->setCallback (f);
-
+    double start_angle;
+    private_nh.param("start_angle", start_angle, 0.0);
+    lidarRotationStartAngle = int(start_angle * 100);
     // subscribe to PandarScan packets
     pandar_scan_ =
         node.subscribe("pandar_packets", 100,
@@ -76,7 +78,7 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
     //     data_->unpack(scanMsg->packets[i], *outMsg);
     // }
     double firstStamp = 0.0f;
-    int ret = data_->unpack(scanMsg, *outMsg , gps1 , gps2 , firstStamp);
+    int ret = data_->unpack(scanMsg, *outMsg , gps1 , gps2 , firstStamp, lidarRotationStartAngle);
 
     // publish the accumulated cloud message
 	ROS_DEBUG_STREAM("Publishing " << outMsg->height * outMsg->width
