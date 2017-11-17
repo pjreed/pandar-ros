@@ -22,7 +22,6 @@
   <build_depend>roslib</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>tf</build_depend>
-  <build_depend>pandar_driver</build_depend>
   <build_depend>pandar_msgs</build_depend>
   <build_depend>yaml-cpp</build_depend>
   <build_depend>dynamic_reconfigure</build_depend>
@@ -41,7 +40,6 @@
   <run_depend>roslib</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>tf</run_depend>
-  <run_depend>pandar_driver</run_depend>
   <run_depend>pandar_msgs</run_depend>
   <run_depend>yaml-cpp</run_depend>
   <run_depend>dynamic_reconfigure</run_depend>

@@ -9,7 +9,6 @@ set(${PROJECT_NAME}_CATKIN_DEPS
     roslib
     sensor_msgs
     tf
-    pandar_driver
     pandar_msgs
     dynamic_reconfigure
 )

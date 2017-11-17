@@ -4,7 +4,7 @@
 <launch>
 
   <!-- declare arguments with default values -->
-  <arg name="calibration" default="$(find pandar_pointcloud)/params/Lidar-Correction-18.csv"/>
+  <arg name="calibration" default="$(find pandar_pointcloud)/args/Lidar-Correction-18.csv"/>
   <arg name="device_ip" default="" />
   <arg name="frame_id" default="pandar" />
   <arg name="manager" default="$(arg frame_id)_nodelet_manager" />
@@ -17,20 +17,10 @@
   <arg name="repeat_delay" default="0.0" />
   <arg name="rpm" default="600.0" />
   <arg name="start_angle" default="0.0" />
+  <arg name="model" default="" />
 
-  <!-- start nodelet manager and driver nodelets -->
-  <include file="$(find pandar_driver)/launch/nodelet_manager.launch">
-    <arg name="device_ip" value="$(arg device_ip)"/>
-    <arg name="frame_id" value="$(arg frame_id)"/>
-    <arg name="manager" value="$(arg manager)" />
-    <arg name="pcap" value="$(arg pcap)"/>
-    <arg name="port" value="$(arg port)"/>
-    <arg name="read_fast" value="$(arg read_fast)"/>
-    <arg name="read_once" value="$(arg read_once)"/>
-    <arg name="repeat_delay" value="$(arg repeat_delay)"/>
-    <arg name="rpm" value="$(arg rpm)"/>
-
-  </include>
+  <!-- start nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="$(arg manager)" args="manager" />
 
   <!-- start cloud nodelet -->
   <include file="$(find pandar_pointcloud)/launch/cloud_nodelet.launch">
@@ -39,6 +29,15 @@
     <arg name="max_range" value="$(arg max_range)"/>
     <arg name="min_range" value="$(arg min_range)"/>
     <arg name="start_angle" value="$(arg start_angle)"/>
+    <arg name="device_ip" value="$(arg device_ip)" />
+    <arg name="frame_id" value="$(arg frame_id)"/>
+    <arg name="model" value="$(arg model)"/>
+    <arg name="pcap" value="$(arg pcap)"/>
+    <arg name="port" value="$(arg port)" />
+    <arg name="read_fast" value="$(arg read_fast)"/>
+    <arg name="read_once" value="$(arg read_once)"/>
+    <arg name="repeat_delay" value="$(arg repeat_delay)"/>
+    <arg name="rpm" value="$(arg rpm)"/>
   </include>
   <!--
   -->

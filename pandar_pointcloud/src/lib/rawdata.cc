@@ -429,6 +429,152 @@ void RawData::toPointClouds (raw_packet_t* packet,int laser , int block,  PPoint
     }
 }
 
+int RawData::unpack(pandar_msgs::PandarPacket &packet, PPointCloud &pc, time_t& gps1 , 
+                                            gps_struct_t &gps2 , double& firstStamp, int& lidarRotationStartAngle)
+{
+    currentPacketStart = bufferPacketSize == 0 ? 0 :bufferPacketSize -1 ;
+
+    parseRawData(&bufferPacket[bufferPacketSize++], &packet.data[0], packet.data.size());
+
+    int hasAframe = 0;
+    int currentBlockEnd = 0;
+    int currentPacketEnd = 0;
+    if(bufferPacketSize > 1)
+    {
+        int lastAzumith = -1;
+        for(int i = currentPacketStart ; i < bufferPacketSize ; i++)
+        {
+            if(hasAframe)
+            {
+                break;
+            }
+
+            int j = 0;
+            if (i == currentPacketStart)
+            {
+                /* code */
+                j = lastBlockEnd;
+            }
+            else
+            {
+                j = 0;
+            }
+            for (; j < BLOCKS_PER_PACKET; ++j)
+            {
+                /* code */
+                if(lastAzumith == -1)
+                {
+                    lastAzumith = bufferPacket[i].blocks[j].azimuth;
+                    continue;
+                }
+
+
+                if(lastAzumith > bufferPacket[i].blocks[j].azimuth)
+                {
+                    if (lidarRotationStartAngle <= bufferPacket[i].blocks[j].azimuth)
+                    {
+                        // ROS_ERROR("rotation, %d, %d, %d", lastAzumith, bufferPacket[i].blocks[j].azimuth, lidarRotationStartAngle);
+                        currentBlockEnd = j;
+                        hasAframe = 1;
+                        currentPacketEnd = i;
+                        break;
+                    }
+
+                }
+                else if (lastAzumith < lidarRotationStartAngle && lidarRotationStartAngle <= bufferPacket[i].blocks[j].azimuth)
+                {
+                    // ROS_ERROR("%d, %d, %d", lastAzumith, bufferPacket[i].blocks[j].azimuth, lidarRotationStartAngle);
+                    currentBlockEnd = j;
+                    hasAframe = 1;
+                    currentPacketEnd = i;
+                    break;
+                }
+                lastAzumith = bufferPacket[i].blocks[j].azimuth;
+            }
+        }
+    }
+
+    if(hasAframe)
+    {
+
+        int first = 0;
+        int j = 0;
+        for (int k = 0; k < (currentPacketEnd + 1); ++k)
+        {
+            if(k == 0)
+                j = lastBlockEnd;
+            else
+                j = 0;
+
+            
+
+            // if > 500ms 
+            if(bufferPacket[k].timestamp < 500000 && gps2.used == 0)
+            {
+                if(gps1 > gps2.gps)
+                {
+                    ROS_ERROR("Oops , You give me a wrong timestamp I think...");
+                }
+                gps1 = gps2.gps;
+                gps2.used =1;
+            }
+            else
+            {
+                if(bufferPacket[k].timestamp < lastTimestamp)
+                {
+                    int gap = (int)lastTimestamp - (int)bufferPacket[k].timestamp;
+                    // avoid the fake jump... wrong udp order
+                    if(gap > (10 * 1000)) // 10ms
+                    {
+                        // Oh , there is a round. But gps2 is not changed , So there is no gps packet!!!
+                        // We need to add the offset.
+                        
+                        gps1 += ((lastTimestamp-20) /1000000) +  1; // 20us offset , avoid the timestamp of 1000002...
+                        ROS_ERROR("There is a round , But gps packet!!! , Change gps1 by manual!!! %d %d %d " , gps1 , lastTimestamp , bufferPacket[k].timestamp);
+                    }
+                    
+                }
+            }
+            int timestamp = bufferPacket[k].timestamp;
+
+
+            // int gap = timestamp - lastTimestamp;
+            // gap = gap <0 ? gap + 1000000 : gap;
+            // if(gap > 600)
+            // {
+            //     ROS_ERROR("gap too large %d-%d=%d"  , timestamp ,lastTimestamp , gap);
+            // }
+            // ROS_ERROR("timestamp : %d %lf %d"  , timestamp ,ros::Time::now().toSec() , gps1);
+            // ROS_ERROR("timestamp of this packe t : %lf" ,(double)gps1 + (((double)bufferPacket[k].timestamp)/1000000));
+            for (; j < BLOCKS_PER_PACKET; ++j)
+            {
+                /* code */
+                if (currentBlockEnd == j && k == (currentPacketEnd))
+                {
+                    break;
+                }
+                double stamp = 0.0;
+                toPointClouds(&bufferPacket[k] , j, pc ,(double)gps1 + (((double)bufferPacket[k].timestamp)/1000000) , stamp);
+                if(!first && stamp != 0.0)
+                {
+                    firstStamp = stamp;
+                    first = 1;
+                }
+                
+            } 
+            lastTimestamp = bufferPacket[k].timestamp;
+        }
+        memcpy(&bufferPacket[0] , &bufferPacket[currentPacketEnd] , sizeof(raw_packet_t) * (bufferPacketSize - currentPacketEnd));
+        bufferPacketSize = bufferPacketSize - currentPacketEnd;
+        lastBlockEnd = currentBlockEnd;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 int RawData::unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc , time_t& gps1 , 
     gps_struct_t &gps2 , double& firstStamp, int& lidarRotationStartAngle)
 {

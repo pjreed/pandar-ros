@@ -1,13 +1,18 @@
-add_executable(cloud_node cloud_node.cc convert.cc)
+add_executable(cloud_node cloud_node.cc convert.cc driver.cc)
 add_dependencies(cloud_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(cloud_node pandar_rawdata
+					  pandar_input
+					  pcap
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES})
 install(TARGETS cloud_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
-add_library(cloud_nodelet cloud_nodelet.cc convert.cc)
+add_library(cloud_nodelet cloud_nodelet.cc convert.cc driver.cc)
 add_dependencies(cloud_nodelet ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(cloud_nodelet pandar_rawdata
+target_link_libraries(cloud_nodelet 
+					  pandar_rawdata 
+					  pandar_input
+					  pcap
                       ${catkin_LIBRARIES} ${YAML_CPP_LIBRARIES})
 install(TARGETS cloud_nodelet
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}

@@ -126,6 +126,9 @@ public:
     int unpack(const pandar_msgs::PandarScan::ConstPtr &scanMsg, PPointCloud &pc, time_t& gps1 , 
                                             gps_struct_t &gps2 , double& firstStamp, int& lidarRotationStartAngle);
 
+    int unpack(pandar_msgs::PandarPacket &packet, PPointCloud &pc, time_t& gps1 , 
+                                            gps_struct_t &gps2 , double& firstStamp, int& lidarRotationStartAngle);
+
     void setParameters(double min_range, double max_range, double view_direction,
                        double view_width);
 
