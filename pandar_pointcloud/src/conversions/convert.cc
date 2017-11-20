@@ -130,11 +130,12 @@ void Convert::pushLiDARData(pandar_msgs::PandarPacket packet)
 {
     pthread_mutex_lock(&piclock);
     LiDARDataSet.push_back(packet);
-    pthread_mutex_unlock(&piclock);
     if(LiDARDataSet.size() > 6)
     {
         sem_post(&picsem);
     }
+    pthread_mutex_unlock(&piclock);
+    
 }
 
 int Convert::processLiDARData()
