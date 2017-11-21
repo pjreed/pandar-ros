@@ -188,7 +188,11 @@ bool PandarDriver::poll(void)
               gps->second = packet.second;
 
               gps->used = 0;
-
+              if(gps->year > 30 || gps->year < 17)
+              {
+                ROS_ERROR("Ignore wrong GPS data (year)%d" , gps->year);
+                continue;
+              }
               convert->processGps(*gps);
               gpsoutput_.publish(gps);
             }
@@ -205,6 +209,20 @@ bool PandarDriver::poll(void)
   scan->header.stamp = scan->packets[readpacket - 1].stamp;
   scan->header.frame_id = config_.frame_id;
   output_.publish(scan);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   // notify diagnostics that a message has been published, updating
   // its status
