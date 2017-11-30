@@ -39,6 +39,8 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh):
     double start_angle;
     private_nh.param("start_angle", start_angle, 0.0);
     lidarRotationStartAngle = int(start_angle * 100);
+
+    hasGps = 0;
     // subscribe to PandarScan packets
     // pandar_scan_ =
     //     node.subscribe("pandar_packets", 100,
@@ -52,8 +54,8 @@ Convert::Convert(ros::NodeHandle node, ros::NodeHandle private_nh):
     sem_init(&picsem, 0, 0);
     pthread_mutex_init(&piclock, NULL);
 
-    boost::thread thrd(boost::bind(&Convert::DriverReadThread, this));  
-    boost::thread processThr(boost::bind(&Convert::processLiDARData, this));  
+    boost::thread thrd(boost::bind(&Convert::DriverReadThread, this));
+    boost::thread processThr(boost::bind(&Convert::processLiDARData, this));
 }
 
 void Convert::DriverReadThread()
@@ -108,7 +110,7 @@ void Convert::processScan(const pandar_msgs::PandarScan::ConstPtr &scanMsg)
 
 void Convert::processGps(pandar_msgs::PandarGps &gpsMsg)
 {
-   
+
     struct tm t;
     t.tm_sec = gpsMsg.second;
     t.tm_min = gpsMsg.minute;
@@ -116,7 +118,7 @@ void Convert::processGps(pandar_msgs::PandarGps &gpsMsg)
     t.tm_mday = gpsMsg.day;
     t.tm_mon = gpsMsg.month - 1;
     t.tm_year = gpsMsg.year + 2000 - 1900;
-    t.tm_isdst = 0;  
+    t.tm_isdst = 0;
     if(lastGPSSecond != (mktime(&t) + 1))
     {
         lastGPSSecond = (mktime(&t) + 1);
@@ -135,7 +137,7 @@ void Convert::pushLiDARData(pandar_msgs::PandarPacket packet)
         sem_post(&picsem);
     }
     pthread_mutex_unlock(&piclock);
-    
+
 }
 
 int Convert::processLiDARData()
@@ -190,7 +192,14 @@ int Convert::processLiDARData()
             }
 
             lastTimestamp = firstStamp;
-            pcl_conversions::toPCL(ros::Time(firstStamp), outMsg->header.stamp);
+            if(hasGps)
+            {
+              pcl_conversions::toPCL(ros::Time(firstStamp), outMsg->header.stamp);
+            }
+            else
+            {
+              pcl_conversions::toPCL(ros::Time::now(), outMsg->header.stamp);
+            }
             output_.publish(outMsg);
             outMsg->clear();
 
@@ -201,10 +210,7 @@ int Convert::processLiDARData()
 
 void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
 {
-    if (output_.getNumSubscribers() == 0)         // no one listening?
-        return;                                     // avoid much work
-    
-    
+    hasGps = 1;
     struct tm t;
     t.tm_sec = gpsMsg->second;
     t.tm_min = gpsMsg->minute;
@@ -212,7 +218,7 @@ void Convert::processGps(const pandar_msgs::PandarGps::ConstPtr &gpsMsg)
     t.tm_mday = gpsMsg->day;
     t.tm_mon = gpsMsg->month - 1;
     t.tm_year = gpsMsg->year + 2000 - 1900;
-    t.tm_isdst = 0;  
+    t.tm_isdst = 0;
     if(lastGPSSecond != (mktime(&t) + 1))
     {
         lastGPSSecond = (mktime(&t) + 1);

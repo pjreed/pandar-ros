@@ -72,6 +72,7 @@ private:
 
     time_t gps1;
     pandar_rawdata::gps_struct_t gps2;
+    bool hasGps;
 
     unsigned int lastGPSSecond;
     int lidarRotationStartAngle;
