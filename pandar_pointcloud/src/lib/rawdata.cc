@@ -287,6 +287,7 @@ void RawData::computeXYZIR(PPoint& point, int azimuth,
 }
 
 
+#ifdef PANDAR20
 static int PandarEnableList[LASER_COUNT] = {
     0,
     1,
@@ -329,6 +330,54 @@ static int PandarEnableList[LASER_COUNT] = {
     0,
     1,
 };
+#endif
+
+#define PANDAR16
+
+#ifdef PANDAR16
+static int PandarEnableList[LASER_COUNT] = {
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+};
+#endif
 
 
 void RawData::toPointClouds (raw_packet_t* packet, PPointCloud& pc)
