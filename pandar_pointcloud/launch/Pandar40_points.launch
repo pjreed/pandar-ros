@@ -4,7 +4,7 @@
 <launch>
 
   <!-- declare arguments with default values -->
-  <arg name="calibration" default="$(find pandar_pointcloud)/args/Lidar-Correction-18.csv"/>
+  <arg name="calibration" default="$(find pandar_pointcloud)/params/Lidar-Correction-18.csv"/>
   <arg name="device_ip" default="" />
   <arg name="frame_id" default="pandar" />
   <arg name="manager" default="$(arg frame_id)_nodelet_manager" />
