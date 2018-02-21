@@ -46,6 +46,5 @@ namespace pandar_pointcloud
 
 // Register this plugin with pluginlib.  Names must match nodelet_pandar.xml.
 //
-// parameters: package, class name, class type, base class type
-PLUGINLIB_DECLARE_CLASS(pandar_pointcloud, RingColorsNodelet,
-                        pandar_pointcloud::RingColorsNodelet, nodelet::Nodelet);
+// parameters: class type, base class type
+PLUGINLIB_EXPORT_CLASS(pandar_pointcloud::RingColorsNodelet, nodelet::Nodelet);
