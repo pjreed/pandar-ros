@@ -3,14 +3,15 @@ project(pandar_pointcloud)
 
 set(${PROJECT_NAME}_CATKIN_DEPS
     angles
+    diagnostic_updater
+    dynamic_reconfigure
     nodelet
+    pandar_msgs
     pcl_ros
     roscpp
     roslib
     sensor_msgs
     tf
-    pandar_msgs
-    dynamic_reconfigure
 )
 
 find_package(catkin REQUIRED COMPONENTS
@@ -29,6 +30,9 @@ find_library(YAML_CPP_LIBRARY
              PATHS ${YAML_CPP_LIBRARY_DIRS})
 
 link_directories(${YAML_CPP_LIBRARY_DIRS})
+
+# libpcap provides no pkg-config or find_package module:
+set(libpcap_LIBRARIES -lpcap)
 
 generate_dynamic_reconfigure_options(
   cfg/CloudNode.cfg cfg/TransformNode.cfg
